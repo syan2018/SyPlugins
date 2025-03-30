@@ -17,7 +17,7 @@ public class SyCore : ModuleRules
 		
 		PrivateIncludePaths.AddRange(
 			new string[] {
-				// ... add other private include paths required here ...
+				// ... add private include paths required here ...
 			}
 			);
 			
@@ -26,6 +26,10 @@ public class SyCore : ModuleRules
 			new string[]
 			{
 				"Core",
+				"CoreUObject",
+				"Engine",
+				"GameplayTags",
+				"InputCore",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

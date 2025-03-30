@@ -24,6 +24,11 @@ graph TD
     I --> |索引| D
 ```
 
+我希望一套完整完成后的使用链条如下：
+1. 设计师给每个BPActor添加SyEntity组件
+2. 设计师配置Actor的默认GameplayTag，确定作用域
+3. 设计师拖拽BP进入场景，BP自动生成UUID，并完成Identifier的初始化，支持后续消息组件能基于Identity组件与消息总线通信
+
 ## 插件层级
 1. **SyCore**
    - 核心功能模块集合
