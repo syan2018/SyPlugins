@@ -1,28 +1,10 @@
 #include "Nodes/Messaging/SyFlowNode_ListenByType.h"
+#include "Messaging/SyMessageBus.h"
+#include "Messaging/SyMessageFilter.h"
 
 USyFlowNode_ListenByType::USyFlowNode_ListenByType(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-}
-
-void USyFlowNode_ListenByType::ExecuteInput(const FName& PinName)
-{
-    if(PinName == "Start")
-    {
-        if(USyMessageBus* MessageBus = GetMessageBus())
-        {
-            MessageBus->SubscribeToMessageType(MessageTypeTag, this);
-            SubscribedTags.Add(MessageTypeTag);
-        }
-    }
-    else if(PinName == "Stop")
-    {
-        if(USyMessageBus* MessageBus = GetMessageBus())
-        {
-            MessageBus->UnsubscribeFromMessageType(MessageTypeTag, this);
-            SubscribedTags.Remove(MessageTypeTag);
-        }
-    }
 }
 
 void USyFlowNode_ListenByType::HandleMessage(const FSyMessage& Message)
@@ -38,7 +20,22 @@ void USyFlowNode_ListenByType::HandleMessage(const FSyMessage& Message)
     TriggerOutput("OnMessage", false);
 }
 
+USyMessageFilterComposer* USyFlowNode_ListenByType::CreateMessageFilter() const
+{
+    USyMessageFilterComposer* Filter = NewObject<USyMessageFilterComposer>();
+
+    // 添加消息类型过滤
+    if (MessageType.IsValid())
+    {
+        USyMessageTypeFilter* TypeFilter = NewObject<USyMessageTypeFilter>();
+        TypeFilter->MessageType = MessageType;
+        Filter->AddFilter(TypeFilter);
+    }
+
+    return Filter;
+}
+
 FString USyFlowNode_ListenByType::GetNodeDescription() const
 {
-    return FString::Printf(TEXT("Listening for message type: %s"), *MessageTypeTag.ToString());
+    return FString::Printf(TEXT("Listen Message By Type\nType: %s"), *MessageType.ToString());
 } 

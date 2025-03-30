@@ -1,28 +1,10 @@
 #include "Nodes/Messaging/SyFlowNode_ListenBySource.h"
+#include "Messaging/SyMessageBus.h"
+#include "Messaging/SyMessageFilter.h"
 
 USyFlowNode_ListenBySource::USyFlowNode_ListenBySource(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-}
-
-void USyFlowNode_ListenBySource::ExecuteInput(const FName& PinName)
-{
-    if(PinName == "Start")
-    {
-        if(USyMessageBus* MessageBus = GetMessageBus())
-        {
-            MessageBus->SubscribeToSourceType(SourceTag, this);
-            SubscribedTags.Add(SourceTag);
-        }
-    }
-    else if(PinName == "Stop")
-    {
-        if(USyMessageBus* MessageBus = GetMessageBus())
-        {
-            MessageBus->UnsubscribeFromSourceType(SourceTag, this);
-            SubscribedTags.Remove(SourceTag);
-        }
-    }
 }
 
 void USyFlowNode_ListenBySource::HandleMessage(const FSyMessage& Message)
@@ -37,7 +19,40 @@ void USyFlowNode_ListenBySource::HandleMessage(const FSyMessage& Message)
     TriggerOutput("OnMessage", false);
 }
 
+USyMessageFilterComposer* USyFlowNode_ListenBySource::CreateMessageFilter() const
+{
+    USyMessageFilterComposer* Filter = NewObject<USyMessageFilterComposer>();
+
+    // 添加源类型过滤
+    if (SourceTag.IsValid())
+    {
+        USySourceTypeFilter* TypeFilter = NewObject<USySourceTypeFilter>();
+        TypeFilter->SourceType = SourceTag;
+        Filter->AddFilter(TypeFilter);
+    }
+
+    // 添加GUID过滤
+    if (SourceIdentity.IsValid())
+    {
+        USySourceGuidFilter* GuidFilter = NewObject<USySourceGuidFilter>();
+        GuidFilter->SourceGuid = SourceIdentity;
+        Filter->AddFilter(GuidFilter);
+    }
+
+    // 添加别名过滤
+    if (!SourceAlias.IsNone())
+    {
+        USySourceAliasFilter* AliasFilter = NewObject<USySourceAliasFilter>();
+        AliasFilter->SourceAlias = SourceAlias;
+        Filter->AddFilter(AliasFilter);
+    }
+
+    return Filter;
+}
+
 FString USyFlowNode_ListenBySource::GetNodeDescription() const
 {
-    return FString::Printf(TEXT("Listening for messages from source: %s"), *SourceTag.ToString());
+    return FString::Printf(TEXT("Listen Message By Source\nType: %s\nAlias: %s"),
+        *SourceTag.ToString(),
+        *SourceAlias.ToString());
 } 

@@ -13,20 +13,37 @@ USyFlowNode_MessageBase::USyFlowNode_MessageBase(const FObjectInitializer& Objec
 
 USyMessageBus* USyFlowNode_MessageBase::GetMessageBus() const
 {
-    return SySubsystemUtils::GetSubsystem<USyMessageBus>(GetWorld());
+    return GetWorld()->GetGameInstance()->GetSubsystem<USyMessageBus>();
 }
 
 void USyFlowNode_MessageBase::Cleanup()
 {
-    // 清理所有订阅
-    if (USyMessageBus* MessageBus = GetMessageBus())
+    if (MessageFilter)
     {
-        for (const FGameplayTag& Tag : SubscribedTags)
+        if (USyMessageBus* MessageBus = GetMessageBus())
         {
-            MessageBus->UnsubscribeFromSourceType(Tag, this);
+            MessageBus->UnsubscribeWithFilter(MessageFilter, this);
         }
-        SubscribedTags.Empty();
+        MessageFilter = nullptr;
     }
-    
-    Super::Cleanup();
+}
+
+void USyFlowNode_MessageBase::ExecuteInput(const FName& PinName)
+{
+    if (PinName == "Start")
+    {
+        if (!MessageFilter)
+        {
+            MessageFilter = CreateMessageFilter();
+        }
+
+        if (MessageFilter && GetMessageBus())
+        {
+            GetMessageBus()->SubscribeWithFilter(MessageFilter, this);
+        }
+    }
+    else if (PinName == "Stop")
+    {
+        Cleanup();
+    }
 }

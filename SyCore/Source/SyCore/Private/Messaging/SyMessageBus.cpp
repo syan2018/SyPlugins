@@ -1,72 +1,59 @@
 #include "Messaging/SyMessageBus.h"
 #include "Messaging/SyMessageReceiver.h"
+#include "Messaging/SyMessageFilter.h"
 
 void USyMessageBus::BroadcastMessage(const FSyMessage& Message)
 {
     DispatchMessage(Message);
 }
 
-void USyMessageBus::SubscribeToMessageType(const FGameplayTag& MessageType, UObject* Subscriber)
+void USyMessageBus::SubscribeWithFilter(USyMessageFilterComposer* Filter, UObject* Subscriber)
 {
-    if (Subscriber && MessageType.IsValid())
+    if (Filter && Subscriber)
     {
-        MessageTypeSubscriptions.Add(MessageType, Subscriber);
+        MessageSubscriptions.Add(Filter, Subscriber);
     }
 }
 
-void USyMessageBus::SubscribeToSourceType(const FGameplayTag& SourceType, UObject* Subscriber)
+void USyMessageBus::UnsubscribeWithFilter(USyMessageFilterComposer* Filter, UObject* Subscriber)
 {
-    if (Subscriber && SourceType.IsValid())
+    if (Filter && Subscriber)
     {
-        SourceTypeSubscriptions.Add(SourceType, Subscriber);
+        MessageSubscriptions.Remove(Filter, Subscriber);
     }
 }
 
-void USyMessageBus::UnsubscribeFromMessageType(const FGameplayTag& MessageType, UObject* Subscriber)
-{
-    if (Subscriber && MessageType.IsValid())
-    {
-        MessageTypeSubscriptions.Remove(MessageType, Subscriber);
-    }
-}
-
-void USyMessageBus::UnsubscribeFromSourceType(const FGameplayTag& SourceType, UObject* Subscriber)
-{
-    if (Subscriber && SourceType.IsValid())
-    {
-        SourceTypeSubscriptions.Remove(SourceType, Subscriber);
-    }
-}
-
-TArray<UObject*> USyMessageBus::GetMessageTypeSubscribers(const FGameplayTag& MessageType) const
+TArray<UObject*> USyMessageBus::GetSubscribersForFilter(USyMessageFilterComposer* Filter) const
 {
     TArray<UObject*> Subscribers;
-    MessageTypeSubscriptions.MultiFind(MessageType, Subscribers);
-    return Subscribers;
-}
-
-TArray<UObject*> USyMessageBus::GetSourceTypeSubscribers(const FGameplayTag& SourceType) const
-{
-    TArray<UObject*> Subscribers;
-    SourceTypeSubscriptions.MultiFind(SourceType, Subscribers);
+    if (Filter)
+    {
+        MessageSubscriptions.MultiFind(Filter, Subscribers);
+    }
     return Subscribers;
 }
 
 void USyMessageBus::DispatchMessage(const FSyMessage& Message)
 {
-    // 获取消息类型订阅者
-    TArray<UObject*> MessageTypeSubscribers = GetMessageTypeSubscribers(Message.Content.MessageType);
+    // 收集所有匹配的订阅者
+    TSet<UObject*> MatchedSubscribers;
     
-    // 获取源类型订阅者
-    TArray<UObject*> SourceTypeSubscribers = GetSourceTypeSubscribers(Message.Source.SourceType);
+    // 遍历所有过滤器
+    for (auto& Subscription : MessageSubscriptions)
+    {
+        USyMessageFilterComposer* Filter = Subscription.Key;
+        
+        // 检查过滤器是否匹配
+        if (Filter && Filter->Matches(Message))
+        {
+            // 获取该过滤器的所有订阅者
+            TArray<UObject*> FilterSubscribers = GetSubscribersForFilter(Filter);
+            MatchedSubscribers.Append(FilterSubscribers);
+        }
+    }
 
-    // 合并订阅者列表（去重）
-    TSet<UObject*> UniqueSubscribers;
-    UniqueSubscribers.Append(MessageTypeSubscribers);
-    UniqueSubscribers.Append(SourceTypeSubscribers);
-
-    // 通知所有订阅者
-    for (UObject* Subscriber : UniqueSubscribers)
+    // 通知所有匹配的订阅者
+    for (UObject* Subscriber : MatchedSubscribers)
     {
         if (Subscriber && Subscriber->Implements<USyMessageReceiver>())
         {

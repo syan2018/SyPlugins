@@ -16,11 +16,12 @@ public:
     virtual FString GetNodeDescription() const override;
 
 protected:
-    // 执行输入Pin
-    virtual void ExecuteInput(const FName& PinName) override;
     
     // 处理消息
     virtual void HandleMessage(const FSyMessage& Message) override;
+
+    // 创建消息过滤器
+    virtual USyMessageFilterComposer* CreateMessageFilter() const override;
 
     // 过滤配置
     UPROPERTY(EditAnywhere, Category = "Filter|Source", meta = (DisplayName = "Source Type"))
@@ -33,7 +34,7 @@ protected:
     FName SourceAlias;
     
     UPROPERTY(EditAnywhere, Category = "Filter|Message", meta = (DisplayName = "Message Type"))
-    FGameplayTag MessageTypeTag;
+    FGameplayTag MessageType;
     
     // 消息内容数据
     UPROPERTY()

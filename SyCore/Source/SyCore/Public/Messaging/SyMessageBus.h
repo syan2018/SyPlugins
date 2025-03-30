@@ -4,6 +4,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "SyMessageTypes.h"
 #include "SyMessageReceiver.h"
+#include "SyMessageFilter.h"
 #include "SyMessageBus.generated.h"
 
 /**
@@ -22,19 +23,15 @@ public:
     void BroadcastMessage(const FSyMessage& Message);
 
     // Flow节点订阅接口
-    void SubscribeToMessageType(const FGameplayTag& MessageType, UObject* Subscriber);
-    void SubscribeToSourceType(const FGameplayTag& SourceType, UObject* Subscriber);
-    void UnsubscribeFromMessageType(const FGameplayTag& MessageType, UObject* Subscriber);
-    void UnsubscribeFromSourceType(const FGameplayTag& SourceType, UObject* Subscriber);
+    void SubscribeWithFilter(USyMessageFilterComposer* Filter, UObject* Subscriber);
+    void UnsubscribeWithFilter(USyMessageFilterComposer* Filter, UObject* Subscriber);
 
     // 获取订阅者列表
-    TArray<UObject*> GetMessageTypeSubscribers(const FGameplayTag& MessageType) const;
-    TArray<UObject*> GetSourceTypeSubscribers(const FGameplayTag& SourceType) const;
+    TArray<UObject*> GetSubscribersForFilter(USyMessageFilterComposer* Filter) const;
 
 private:
     // 消息订阅表
-    TMultiMap<FGameplayTag, UObject*> MessageTypeSubscriptions;
-    TMultiMap<FGameplayTag, UObject*> SourceTypeSubscriptions;
+    TMultiMap<USyMessageFilterComposer*, UObject*> MessageSubscriptions;
 
     // 消息过滤和分发
     void DispatchMessage(const FSyMessage& Message);

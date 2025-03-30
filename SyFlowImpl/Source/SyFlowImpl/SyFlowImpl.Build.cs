@@ -28,8 +28,7 @@ public class SyFlowImpl : ModuleRules
 				"Core",
 				"Flow",           
 				"SyCore",         
-				"GameplayTags",   
-				"GameplayAbilities", 
+				"GameplayTags",  
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
