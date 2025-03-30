@@ -28,6 +28,11 @@ public:
     FGuid GetEntityId() const { return EntityId; }
 
     UFUNCTION(BlueprintPure, Category = "SyIdentity")
+    FGameplayTagContainer GetEntityTags() const { return EntityTags; }
+
+    UFUNCTION(BlueprintPure, Category = "SyIdentity")
+    FName GetEntityAlias() const { return EntityAlias; }
+    UFUNCTION(BlueprintPure, Category = "SyIdentity")
     bool HasTag(const FGameplayTag& Tag) const { return EntityTags.HasTag(Tag); }
 
     // 场景实例化时调用
