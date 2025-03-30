@@ -12,7 +12,6 @@ USyMessageComponent::USyMessageComponent()
 void USyMessageComponent::OnComponentCreated()
 {
     Super::OnComponentCreated();
-    EnsureRequiredComponents();
 }
 
 void USyMessageComponent::BeginPlay()
@@ -23,16 +22,7 @@ void USyMessageComponent::BeginPlay()
     IdentityComponent = GetOwner()->FindComponentByClass<USyIdentityComponent>();
 }
 
-void USyMessageComponent::EnsureRequiredComponents()
-{
-    // 确保Identity组件存在
-    if (!GetOwner()->FindComponentByClass<USyIdentityComponent>())
-    {
-        // 创建Identity组件
-        USyIdentityComponent* NewIdentityComponent = NewObject<USyIdentityComponent>(GetOwner());
-        NewIdentityComponent->RegisterComponent();
-    }
-}
+
 
 bool USyMessageComponent::SendMessage(const FGameplayTag& MessageType)
 {

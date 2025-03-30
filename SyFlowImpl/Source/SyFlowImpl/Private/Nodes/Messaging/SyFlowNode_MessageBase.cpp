@@ -11,6 +11,12 @@ USyFlowNode_MessageBase::USyFlowNode_MessageBase(const FObjectInitializer& Objec
     OutputPins = {FFlowPin(TEXT("OnMessage"))};
 }
 
+void USyFlowNode_MessageBase::OnMessageReceived_Implementation(const FSyMessage& Message)
+{
+    // 调用子类的消息处理函数
+    HandleMessage(Message);
+}
+
 USyMessageBus* USyFlowNode_MessageBase::GetMessageBus() const
 {
     return GetWorld()->GetGameInstance()->GetSubsystem<USyMessageBus>();

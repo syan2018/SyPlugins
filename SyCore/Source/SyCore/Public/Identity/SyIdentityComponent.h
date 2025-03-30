@@ -39,6 +39,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "SyIdentity")
     void GenerateEntityId();
 
+
 protected:
     virtual void BeginPlay() override;
 
@@ -47,16 +48,16 @@ private:
     UPROPERTY(VisibleAnywhere, Category = "SyIdentity")
     FGuid EntityId;
 
-    // 可选别名 - 允许在编辑器中配置
+    // 可选别名
     UPROPERTY(EditAnywhere, Category = "SyIdentity")
     FName EntityAlias;
 
-    // 默认标签配置 - 在蓝图中配置
-    UPROPERTY(EditDefaultsOnly, Category = "SyIdentity")
+    // 默认标签配置
+    UPROPERTY(EditAnywhere, Category = "SyIdentity")
     FGameplayTagContainer EntityTags;
-
-    // 事件委托 - 用于通知ID生成
+    
     DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEntityIdGenerated);
     UPROPERTY(BlueprintAssignable, Category = "SyIdentity")
     FOnEntityIdGenerated OnEntityIdGenerated;
+
 };

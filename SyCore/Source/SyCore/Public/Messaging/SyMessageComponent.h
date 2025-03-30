@@ -40,9 +40,6 @@ private:
     // 获取消息总线
     class USyMessageBus* GetMessageBus() const;
 
-    // 确保依赖组件存在
-    void EnsureRequiredComponents();
-
     // 内部消息发送实现
     bool SendMessageInternal(const FGameplayTag& MessageType, const TMap<FName, FString>& Metadata);
 }; 

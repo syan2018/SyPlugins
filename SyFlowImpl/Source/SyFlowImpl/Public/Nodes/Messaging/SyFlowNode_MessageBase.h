@@ -4,10 +4,11 @@
 #include "Messaging/SyMessageBus.h"
 #include "Messaging/SyMessageTypes.h"
 #include "Messaging/SyMessageFilter.h"
+#include "Messaging/SyMessageReceiver.h"
 #include "SyFlowNode_MessageBase.generated.h"
 
 UCLASS(Abstract)
-class SYFLOWIMPL_API USyFlowNode_MessageBase : public UFlowNode
+class SYFLOWIMPL_API USyFlowNode_MessageBase : public UFlowNode, public ISyMessageReceiver
 {
     GENERATED_UCLASS_BODY()
 
@@ -17,6 +18,9 @@ public:
     
     // 节点描述
     virtual FString GetNodeDescription() const override PURE_VIRTUAL(GetNodeDescription, return TEXT(""););
+
+    // 实现消息接收接口
+    virtual void OnMessageReceived_Implementation(const FSyMessage& Message) override;
 
 protected:
     // 基础消息处理函数

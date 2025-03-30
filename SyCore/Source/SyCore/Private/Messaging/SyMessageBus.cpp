@@ -4,6 +4,11 @@
 
 void USyMessageBus::BroadcastMessage(const FSyMessage& Message)
 {
+    UE_LOG(LogTemp, Log, TEXT("[SyMessageBus] Broadcasting message - Type=%s, SourceType=%s, SourceId=%s"), 
+        *Message.Content.MessageType.ToString(),
+        *Message.Source.SourceType.ToString(),
+        *Message.Source.SourceId.ToString());
+    
     DispatchMessage(Message);
 }
 
@@ -35,6 +40,7 @@ TArray<UObject*> USyMessageBus::GetSubscribersForFilter(USyMessageFilterComposer
 
 void USyMessageBus::DispatchMessage(const FSyMessage& Message)
 {
+
     // 收集所有匹配的订阅者
     TSet<UObject*> MatchedSubscribers;
     
@@ -49,14 +55,24 @@ void USyMessageBus::DispatchMessage(const FSyMessage& Message)
             // 获取该过滤器的所有订阅者
             TArray<UObject*> FilterSubscribers = GetSubscribersForFilter(Filter);
             MatchedSubscribers.Append(FilterSubscribers);
+            
+            UE_LOG(LogTemp, Log, TEXT("[SyMessageBus] Message matched filter - Filter=%s, Subscribers=%d"), 
+                *Filter->GetName(),
+                FilterSubscribers.Num());
         }
     }
+
+    UE_LOG(LogTemp, Log, TEXT("[SyMessageBus] Dispatching message - Total Matched Subscribers=%d"), 
+        MatchedSubscribers.Num());
 
     // 通知所有匹配的订阅者
     for (UObject* Subscriber : MatchedSubscribers)
     {
         if (Subscriber && Subscriber->Implements<USyMessageReceiver>())
         {
+            UE_LOG(LogTemp, Log, TEXT("[SyMessageBus] Notifying subscriber - Subscriber=%s"), 
+                *Subscriber->GetName());
+            
             ISyMessageReceiver::Execute_OnMessageReceived(Subscriber, Message);
         }
     }
