@@ -32,10 +32,8 @@ SyCore/
 │   │       ├── Foundation/
 │   │       │   └── Utilities/
 │   │       ├── Identity/
-│   │       │   ├── SyIdentifier.h
 │   │       │   └── ···
 │   │       └── Messaging/
-│   │           ├── SyMessageBus.h
 │   │           └── ···
 │   └── SyCore.Build.cs
 ├── SyCore.uplugin
@@ -44,6 +42,31 @@ SyCore/
 
 
 ## 使用指南
+
+### Identity 身份标识模块
+
+由于 ActorComponent 无法处理 Construction Script，因此 SyIdentityComponent 无法在编辑器中自动初始化
+
+
+相关模块理想的使用流程如下
+1. 项目根据自身使用需求，构建通用Actor模板，后续所有含逻辑Actor继承自该模板
+2. 在Actor模板中添加SyEntityComponent组件，随后自动添加Identity、Messaging等组件
+3. 在Actor的Construction Script中调用SyEntity的初始化逻辑，调用到Identity的初始化，相关初始化逻辑继承
+4. 设计师为具体BPActor配置默认的GameplayTag，确定作用域（NPC、敌人、关卡元件）
+5. 设计师拖拽BP进入场景，BP自动生成UUID，并完成Identifier的初始化，支持后续消息组件能基于Identity组件与消息总线通信
+
+
+### MessageBus 消息总线
+
+包含消息组件和用于转发消息的总线
+
+总线的输出主要流向 任务、蓝图、事实 等监听性质的系统，自身通常不需要处理状态管理，主要整转发；后续各自模块的状态记录各自实现
+
+在模块下可以实现部分几个Flow的监听节点：
+- 基于来源监听，输出消息
+- 基于消息监听，输出来源
+- 基于来源、消息的组合监听
+回头检查下如何实现2.0更新后带数值端口的节点（）
 
 
 ## 最佳实践
