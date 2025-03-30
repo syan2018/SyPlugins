@@ -1,6 +1,7 @@
 #include "Messaging/SyMessageComponent.h"
 #include "Messaging/SyMessageBus.h"
 #include "Identity/SyIdentityComponent.h"
+#include "Foundation/Utilities/SySubsystemUtils.h"
 
 USyMessageComponent::USyMessageComponent()
 {
@@ -70,9 +71,5 @@ bool USyMessageComponent::SendMessageInternal(const FGameplayTag& MessageType, c
 
 USyMessageBus* USyMessageComponent::GetMessageBus() const
 {
-    if (UGameInstance* GameInstance = GetWorld()->GetGameInstance())
-    {
-        return GameInstance->GetSubsystem<USyMessageBus>();
-    }
-    return nullptr;
+    return SySubsystemUtils::GetSubsystem<USyMessageBus>(GetWorld());
 } 
