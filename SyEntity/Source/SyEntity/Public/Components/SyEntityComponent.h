@@ -11,13 +11,12 @@ class USyMessageComponent;
 class USyStateComponent;
 
 /**
- * SyEntityComponent - 实体框架核心组件
+ * SyEntityComponent - 实体核心组件
  * 职责：
  * 1. 核心协调器，管理其他Sy*功能组件
  * 2. 提供统一的实体访问点
  * 3. 管理组件生命周期和初始化
  * 4. 实现组件间通信机制
- * 5. 自动添加和管理必要的依赖组件
  */
 UCLASS(Blueprintable, ClassGroup=(SyEntity), meta=(BlueprintSpawnableComponent))
 class SYENTITY_API USyEntityComponent : public UActorComponent
@@ -131,14 +130,16 @@ public:
 
 private:
     // --- 内部属性 ---
-    UPROPERTY(VisibleAnywhere, Category = "SyEntity|Internal", meta = (AllowPrivateAccess = "true"))
+    // 核心依赖组件 - 在构造函数中创建
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true"))
     TObjectPtr<USyIdentityComponent> IdentityComponent;
 
-    UPROPERTY(VisibleAnywhere, Category = "SyEntity|Internal", meta = (AllowPrivateAccess = "true"))
+    // 可选组件 - 在初始化时创建
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true"))
     TObjectPtr<USyMessageComponent> MessageComponent;
 
-    UPROPERTY(VisibleAnywhere, Category = "SyEntity|Internal", Instanced, meta = (AllowPrivateAccess = "true"))
-    TObjectPtr<USyStateComponent> StateComponent; // 状态组件是SyEntity自身创建和管理的
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true"))
+    TObjectPtr<USyStateComponent> StateComponent;
 
     UPROPERTY()
     TArray<TObjectPtr<UActorComponent>> ManagedSyComponents; // 存储所有Sy*组件的引用，便于统一管理
@@ -147,10 +148,29 @@ private:
     bool bRegistered = false; // 是否已注册到Registry
 
     // --- 内部方法 ---
-    void EnsureDependentComponents(); // 确保Identity和Message组件存在
+    void EnsureDependentComponents(); // 确保依赖组件存在（暂时拓展message，其余）
     void RegisterWithRegistry();
     void UnregisterFromRegistry();
     void BindStateChangeDelegate(); // 绑定StateComponent的内部事件到OnEntityStateChanged
     void HandleInternalStateChange(const FGameplayTag& StateTag, bool bNewValue); // StateComponent内部事件处理
     void HandleEntityIdReady(); // IdentityComponent ID生成事件处理
-}; 
+};
+
+// Template implementation for FindSyComponent
+template<typename T>
+T* USyEntityComponent::FindSyComponent() const
+{
+    for (UActorComponent* Comp : ManagedSyComponents)
+    {
+        if (T* TypedComp = Cast<T>(Comp))
+        {
+            return TypedComp;
+        }
+    }
+    // 也可以直接检查已知的主要组件引用
+    if (T* TypedComp = Cast<T>(StateComponent)) return TypedComp;
+    if (T* TypedComp = Cast<T>(MessageComponent)) return TypedComp;
+    if (T* TypedComp = Cast<T>(IdentityComponent)) return TypedComp;
+    // ... 其他组件
+    return nullptr;
+} 

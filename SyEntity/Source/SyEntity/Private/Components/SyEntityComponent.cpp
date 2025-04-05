@@ -1,36 +1,22 @@
 #include "Components/SyEntityComponent.h"
 #include "SyCore/Public/Identity/SyIdentityComponent.h"
 #include "SyCore/Public/Messaging/SyMessageComponent.h"
-#include "Components/SyStateComponent.h"
 #include "Registry/SyEntityRegistry.h"
+#include "States/SyStateComponent.h"
 #include "States/SyStateManager.h"
 #include "GameFramework/Actor.h"
-#include "Engine/Engine.h"
+#include "Engine/World.h"
 
-// 模板实现必须在头文件中，这里只是占位
-template<typename T>
-T* USyEntityComponent::FindSyComponent() const
-{
-    for (UActorComponent* Comp : ManagedSyComponents)
-    {
-        if (T* TypedComp = Cast<T>(Comp))
-        {
-            return TypedComp;
-        }
-    }
-    // 也可以直接检查已知的主要组件引用
-    if (T* TypedComp = Cast<T>(StateComponent)) return TypedComp;
-    if (T* TypedComp = Cast<T>(MessageComponent)) return TypedComp;
-    if (T* TypedComp = Cast<T>(IdentityComponent)) return TypedComp;
-    // ... 其他组件
-    return nullptr;
-}
 
 USyEntityComponent::USyEntityComponent()
 {
+    // 设置组件属性
     PrimaryComponentTick.bCanEverTick = false;
     bIsInitialized = false;
     bRegistered = false;
+    
+    // 创建核心依赖组件 - IdentityComponent
+    IdentityComponent = CreateDefaultSubobject<USyIdentityComponent>(TEXT("IdentityComponent"));
 }
 
 void USyEntityComponent::OnComponentCreated()
@@ -38,7 +24,7 @@ void USyEntityComponent::OnComponentCreated()
     Super::OnComponentCreated();
     
     // 在编辑器中创建组件时，尝试初始化
-    if (GetWorld() && GetWorld()->IsEditorWorld())
+    if (!bIsInitialized)
     {
         InitializeEntity();
     }
@@ -48,7 +34,7 @@ void USyEntityComponent::BeginPlay()
 {
     Super::BeginPlay();
     
-    // 如果尚未初始化，则进行初始化
+    // 如果尚未初始化，则调用初始化
     if (!bIsInitialized)
     {
         InitializeEntity();
@@ -68,21 +54,26 @@ void USyEntityComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void USyEntityComponent::InitializeEntity(bool bForceReinitialization)
 {
-    // 防止重复初始化
+    // 防止重复初始化，除非强制重新初始化
     if (bIsInitialized && !bForceReinitialization)
     {
         return;
     }
     
-    // 确保依赖组件存在
+    
+    // 确保Message组件存在
     EnsureDependentComponents();
     
-    // 创建并添加StateComponent（如果不存在）
+    // 创建并添加StateComponent
     if (!StateComponent)
     {
-        StateComponent = NewObject<USyStateComponent>(this);
-        StateComponent->RegisterComponent();
-        ManagedSyComponents.Add(StateComponent);
+        AActor* Owner = GetOwner();
+        if (Owner)
+        {
+            StateComponent = NewObject<USyStateComponent>(Owner, USyStateComponent::StaticClass());
+            StateComponent->RegisterComponent();
+            ManagedSyComponents.Add(StateComponent);
+        }
     }
     
     // 查找并收集Owner Actor上所有其他标记为Sy*的组件
@@ -106,15 +97,13 @@ void USyEntityComponent::InitializeEntity(bool bForceReinitialization)
     // 绑定状态变更事件
     BindStateChangeDelegate();
     
-    // 监听IdentityComponent的ID生成事件
+    // 处理 Identity
     if (IdentityComponent)
     {
-        // 注意：这里需要IdentityComponent暴露OnEntityIdGenerated事件
-        // 如果IdentityComponent没有暴露此事件，需要修改SyIdentityComponent
-        // 或者使用其他方式监听ID生成
+        IdentityComponent->GenerateEntityId();
         
-        // 如果ID已经有效，直接触发事件
-        if (IdentityComponent->HasValidId())
+        // 如果IdentityComponent已经有ID，则直接触发ID就绪事件
+        if (IdentityComponent->GetEntityId().IsValid())
         {
             HandleEntityIdReady();
         }
@@ -135,24 +124,13 @@ void USyEntityComponent::EnsureDependentComponents()
         return;
     }
     
-    // 确保IdentityComponent存在
-    if (!IdentityComponent)
-    {
-        IdentityComponent = Owner->FindComponentByClass<USyIdentityComponent>();
-        if (!IdentityComponent)
-        {
-            IdentityComponent = NewObject<USyIdentityComponent>(Owner);
-            IdentityComponent->RegisterComponent();
-        }
-    }
-    
     // 确保MessageComponent存在
     if (!MessageComponent)
     {
         MessageComponent = Owner->FindComponentByClass<USyMessageComponent>();
         if (!MessageComponent)
         {
-            MessageComponent = NewObject<USyMessageComponent>(Owner);
+            MessageComponent = NewObject<USyMessageComponent>(Owner, USyMessageComponent::StaticClass());
             MessageComponent->RegisterComponent();
         }
     }
@@ -160,11 +138,15 @@ void USyEntityComponent::EnsureDependentComponents()
 
 void USyEntityComponent::RegisterWithRegistry()
 {
-    if (!bRegistered && GetWorld())
+    if (bRegistered || !IdentityComponent || !IdentityComponent->GetEntityId().IsValid())
     {
-        // 获取EntityRegistry子系统
-        USyEntityRegistry* Registry = GetWorld()->GetSubsystem<USyEntityRegistry>();
-        if (Registry)
+        return;
+    }
+    
+    // 获取EntityRegistry子系统
+    if (UWorld* World = GetWorld())
+    {
+        if (USyEntityRegistry* Registry = World->GetSubsystem<USyEntityRegistry>())
         {
             Registry->RegisterEntity(this);
             bRegistered = true;
@@ -174,11 +156,15 @@ void USyEntityComponent::RegisterWithRegistry()
 
 void USyEntityComponent::UnregisterFromRegistry()
 {
-    if (bRegistered && GetWorld())
+    if (!bRegistered)
     {
-        // 获取EntityRegistry子系统
-        USyEntityRegistry* Registry = GetWorld()->GetSubsystem<USyEntityRegistry>();
-        if (Registry)
+        return;
+    }
+    
+    // 获取EntityRegistry子系统
+    if (UWorld* World = GetWorld())
+    {
+        if (USyEntityRegistry* Registry = World->GetSubsystem<USyEntityRegistry>())
         {
             Registry->UnregisterEntity(this);
             bRegistered = false;
@@ -190,12 +176,8 @@ void USyEntityComponent::BindStateChangeDelegate()
 {
     if (StateComponent)
     {
-        // 注意：这里需要StateComponent暴露InternalOnStateChanged事件
-        // 如果StateComponent没有暴露此事件，需要修改SyStateComponent
-        // 或者使用其他方式监听状态变更
-        
-        // 这里假设StateComponent有一个InternalOnStateChanged事件
-        // StateComponent->InternalOnStateChanged.AddUObject(this, &USyEntityComponent::HandleInternalStateChange);
+        // 假设StateComponent有一个InternalOnStateChanged事件
+        // StateComponent->InternalOnStateChanged.AddDynamic(this, &USyEntityComponent::HandleInternalStateChange);
     }
 }
 
@@ -209,6 +191,12 @@ void USyEntityComponent::HandleEntityIdReady()
 {
     // 广播ID就绪事件
     OnEntityIdReady.Broadcast();
+    
+    // 如果尚未注册，则注册到Registry
+    if (!bRegistered)
+    {
+        RegisterWithRegistry();
+    }
 }
 
 FGuid USyEntityComponent::GetEntityId() const
@@ -217,6 +205,7 @@ FGuid USyEntityComponent::GetEntityId() const
     {
         return IdentityComponent->GetEntityId();
     }
+    
     return FGuid();
 }
 
@@ -226,6 +215,7 @@ FGameplayTagContainer USyEntityComponent::GetEntityTags() const
     {
         return IdentityComponent->GetEntityTags();
     }
+    
     return FGameplayTagContainer();
 }
 
@@ -235,6 +225,7 @@ FName USyEntityComponent::GetEntityAlias() const
     {
         return IdentityComponent->GetEntityAlias();
     }
+    
     return NAME_None;
 }
 
@@ -244,6 +235,7 @@ bool USyEntityComponent::GetState(const FGameplayTag& StateTag) const
     {
         return StateComponent->GetState(StateTag);
     }
+    
     return false;
 }
 
@@ -251,7 +243,7 @@ void USyEntityComponent::SetState(const FGameplayTag& StateTag, bool bNewValue, 
 {
     if (StateComponent)
     {
-        StateComponent->SetState(StateTag, bNewValue, true, bSyncGlobal);
+        StateComponent->SetState(StateTag, bNewValue, bSyncGlobal);
     }
 }
 
@@ -261,6 +253,7 @@ bool USyEntityComponent::SendMessage(const FGameplayTag& MessageType)
     {
         return MessageComponent->SendMessage(MessageType);
     }
+    
     return false;
 }
 
@@ -270,5 +263,6 @@ bool USyEntityComponent::SendMessageWithMetadata(const FGameplayTag& MessageType
     {
         return MessageComponent->SendMessageWithMetadata(MessageType, Metadata);
     }
+    
     return false;
 } 

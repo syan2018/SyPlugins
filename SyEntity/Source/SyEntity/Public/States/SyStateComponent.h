@@ -9,7 +9,7 @@
 class USyStateManager;
 
 /**
- * SyStateComponent - 实体状态管理组件
+ * SyStateComponent - 实体状态组件
  * 职责：
  * 1. 维护实体的本地状态集合
  * 2. 提供状态查询和修改接口
@@ -38,11 +38,10 @@ public:
      * @brief 设置状态值。
      * @param StateTag 要设置的状态标签。
      * @param bNewValue 新的状态值。
-     * @param bNotify 是否触发状态变更通知。
      * @param bSyncGlobal 是否尝试与StateManager同步。
      */
     UFUNCTION(BlueprintCallable, Category = "SyState")
-    void SetState(const FGameplayTag& StateTag, bool bNewValue, bool bNotify = true, bool bSyncGlobal = true);
+    void SetState(const FGameplayTag& StateTag, bool bNewValue, bool bSyncGlobal = true);
 
     /**
      * @brief 检查是否存在某个状态。

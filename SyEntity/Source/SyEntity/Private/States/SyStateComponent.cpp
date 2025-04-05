@@ -1,11 +1,12 @@
-#include "Components/SyStateComponent.h"
+#include "States/SyStateComponent.h"
 #include "Components/SyEntityComponent.h"
 #include "States/SyStateManager.h"
 #include "GameFramework/Actor.h"
-#include "Engine/Engine.h"
+#include "Engine/World.h"
 
 USyStateComponent::USyStateComponent()
 {
+    // 设置组件属性
     PrimaryComponentTick.bCanEverTick = false;
     bEnableGlobalSyncByDefault = true;
 }
@@ -14,7 +15,7 @@ void USyStateComponent::InitializeComponent()
 {
     Super::InitializeComponent();
     
-    // 获取OwnerEntityComponent引用
+    // 获取Owner EntityComponent引用
     AActor* Owner = GetOwner();
     if (Owner)
     {
@@ -47,16 +48,27 @@ void USyStateComponent::BeginPlay()
 
 bool USyStateComponent::GetState(const FGameplayTag& StateTag, bool bDefaultValue) const
 {
+    if (!StateTag.IsValid())
+    {
+        return bDefaultValue;
+    }
+    
     const bool* Value = CurrentStates.Find(StateTag);
     if (Value)
     {
         return *Value;
     }
+    
     return bDefaultValue;
 }
 
-void USyStateComponent::SetState(const FGameplayTag& StateTag, bool bNewValue, bool bNotify, bool bSyncGlobal)
+void USyStateComponent::SetState(const FGameplayTag& StateTag, bool bNewValue, bool bSyncGlobal)
 {
+    if (!StateTag.IsValid())
+    {
+        return;
+    }
+    
     // 检查状态是否已存在且值相同
     bool* ExistingValue = CurrentStates.Find(StateTag);
     if (ExistingValue && *ExistingValue == bNewValue)
@@ -67,21 +79,27 @@ void USyStateComponent::SetState(const FGameplayTag& StateTag, bool bNewValue, b
     // 更新状态
     CurrentStates.Add(StateTag, bNewValue);
     
-    // 如果需要通知，则广播事件
-    if (bNotify)
-    {
-        InternalOnStateChanged.Broadcast(StateTag, bNewValue);
-    }
+    // 广播内部状态变更事件
+    InternalOnStateChanged.Broadcast(StateTag, bNewValue);
     
-    // 如果需要同步到全局，则更新StateManager
+    // 如果启用了全局同步，则同步到StateManager
     if (bSyncGlobal && bEnableGlobalSyncByDefault && StateManager)
     {
-        StateManager->UpdateEntityState(GetOwnerEntityId(), StateTag, bNewValue);
+        FGuid EntityId = GetOwnerEntityId();
+        if (EntityId.IsValid())
+        {
+            StateManager->UpdateEntityState(EntityId, StateTag, bNewValue);
+        }
     }
 }
 
 bool USyStateComponent::HasState(const FGameplayTag& StateTag) const
 {
+    if (!StateTag.IsValid())
+    {
+        return false;
+    }
+    
     return CurrentStates.Contains(StateTag);
 }
 
@@ -124,7 +142,7 @@ void USyStateComponent::PushStateToManager()
         return;
     }
     
-    // 将本地所有状态推送到StateManager
+    // 将所有本地状态推送到StateManager
     for (const auto& Pair : CurrentStates)
     {
         StateManager->UpdateEntityState(EntityId, Pair.Key, Pair.Value);
@@ -137,5 +155,6 @@ FGuid USyStateComponent::GetOwnerEntityId() const
     {
         return OwnerEntityComponent->GetEntityId();
     }
+    
     return FGuid();
 } 
