@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "SyEntity.h"
+#include "Modules/ModuleManager.h"
 
 #define LOCTEXT_NAMESPACE "FSyEntityModule"
 

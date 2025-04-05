@@ -26,6 +26,10 @@ public class SyEntity : ModuleRules
 			new string[]
 			{
 				"Core",
+				"CoreUObject",
+				"Engine",
+				"GameplayTags",
+				"SyCore",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
