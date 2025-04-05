@@ -12,7 +12,7 @@ class USyEntityComponent;
  * 实体标签索引结构体，用于包装标签对应的实体列表
  */
 USTRUCT()
-struct FEntityTagIndex
+struct FSyEntityTagIndex
 {
     GENERATED_BODY()
 
@@ -73,7 +73,7 @@ private:
     TMap<FGuid, TObjectPtr<USyEntityComponent>> EntityIdMap;
 
     UPROPERTY()
-    TMap<FGameplayTag, FEntityTagIndex> EntityTagMap; // GameplayTag -> 实体标签索引
+    TMap<FGameplayTag, FSyEntityTagIndex> EntityTagMap; // GameplayTag -> 实体标签索引
 
     // 辅助函数，用于在注册/注销时更新TagMap
     void AddEntityToTagMap(USyEntityComponent* EntityComponent);

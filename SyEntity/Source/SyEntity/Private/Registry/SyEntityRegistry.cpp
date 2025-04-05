@@ -79,7 +79,7 @@ TArray<USyEntityComponent*> USyEntityRegistry::GetEntitiesByTagExact(const FGame
     TArray<USyEntityComponent*> Result;
     
     // 直接从TagMap中获取
-    const FEntityTagIndex* TagIndex = EntityTagMap.Find(EntityTag);
+    const FSyEntityTagIndex* TagIndex = EntityTagMap.Find(EntityTag);
     if (TagIndex)
     {
         for (const TObjectPtr<USyEntityComponent>& Entity : TagIndex->Entities)
@@ -123,7 +123,7 @@ void USyEntityRegistry::AddEntityToTagMap(USyEntityComponent* EntityComponent)
     // 将实体添加到每个Tag对应的列表中
     for (const FGameplayTag& Tag : EntityTags)
     {
-        FEntityTagIndex& TagIndex = EntityTagMap.FindOrAdd(Tag);
+        FSyEntityTagIndex& TagIndex = EntityTagMap.FindOrAdd(Tag);
         TagIndex.Entities.AddUnique(EntityComponent);
     }
 }
@@ -141,7 +141,7 @@ void USyEntityRegistry::RemoveEntityFromTagMap(USyEntityComponent* EntityCompone
     // 从每个Tag对应的列表中移除实体
     for (const FGameplayTag& Tag : EntityTags)
     {
-        FEntityTagIndex* TagIndex = EntityTagMap.Find(Tag);
+        FSyEntityTagIndex* TagIndex = EntityTagMap.Find(Tag);
         if (TagIndex)
         {
             TagIndex->Entities.Remove(EntityComponent);

@@ -9,7 +9,7 @@
  * 实体状态数据结构体，用于包装实体的状态Map
  */
 USTRUCT(BlueprintType)
-struct FEntityStateData
+struct FSyEntityStateData
 {
     GENERATED_BODY()
 
@@ -75,5 +75,5 @@ public:
 private:
     // 存储结构：实体ID -> 实体状态数据
     UPROPERTY()
-    TMap<FGuid, FEntityStateData> GlobalEntityStates;
+    TMap<FGuid, FSyEntityStateData> GlobalEntityStates;
 }; 

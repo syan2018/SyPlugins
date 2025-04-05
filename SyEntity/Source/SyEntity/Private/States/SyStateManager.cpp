@@ -8,7 +8,7 @@ void USyStateManager::UpdateEntityState(const FGuid& EntityId, const FGameplayTa
     }
     
     // 获取或创建实体的状态数据
-    FEntityStateData& EntityData = GlobalEntityStates.FindOrAdd(EntityId);
+    FSyEntityStateData& EntityData = GlobalEntityStates.FindOrAdd(EntityId);
     
     // 检查状态是否已存在且值相同
     bool* ExistingValue = EntityData.States.Find(StateTag);
@@ -34,7 +34,7 @@ bool USyStateManager::GetEntityState(const FGuid& EntityId, const FGameplayTag& 
     }
     
     // 查找实体的状态数据
-    const FEntityStateData* EntityData = GlobalEntityStates.Find(EntityId);
+    const FSyEntityStateData* EntityData = GlobalEntityStates.Find(EntityId);
     if (!EntityData)
     {
         return false;
@@ -62,7 +62,7 @@ TMap<FGameplayTag, bool> USyStateManager::GetAllEntityStates(const FGuid& Entity
     }
     
     // 查找实体的状态数据
-    const FEntityStateData* EntityData = GlobalEntityStates.Find(EntityId);
+    const FSyEntityStateData* EntityData = GlobalEntityStates.Find(EntityId);
     if (!EntityData)
     {
         return Result;
@@ -82,7 +82,7 @@ void USyStateManager::RegisterEntity(const FGuid& EntityId)
     // 如果实体不存在，则创建一个空的状态数据
     if (!GlobalEntityStates.Contains(EntityId))
     {
-        FEntityStateData NewData;
+        FSyEntityStateData NewData;
         GlobalEntityStates.Add(EntityId, NewData);
     }
 }
