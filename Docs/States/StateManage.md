@@ -112,6 +112,27 @@
     *   **关键类型**: `USyStateComponent`。
     *   **依赖**: `SyStateCore`, `SyStateManager`, `SyOperation` (处理Record)
 
+```mermaid
+graph TD
+    SyCore["SyCore (扩展)"] --> GameplayTags["GameplayTags"]
+    SyCore --> TagMetadata["TagMetadata"]
+    
+    SyStateCore --> SyCore
+    SyStateCore --> TagMetadata
+    SyStateCore --> StructUtils["StructUtils"]
+    
+    SyOperation --> SyCore
+    SyOperation --> TagMetadata
+    SyOperation --> StructUtils
+    
+    SyStateManager --> SyOperation
+    SyStateManager --> SyStateCore
+    
+    SyEntity["SyEntity (扩展)"] --> SyStateCore
+    SyEntity --> SyStateManager
+    SyEntity --> SyOperation
+```
+
 ---
 
 ### 5. 关键数据结构 (示例)

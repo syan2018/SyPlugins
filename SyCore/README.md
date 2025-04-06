@@ -1,20 +1,30 @@
-# SyCore - 核心功能模块
+# SyCore - 核心基础模块
 
-## 模块概述
-SyCore 是 SyPlugins 的基础模块，提供了实体标识、消息传递等核心功能。该模块作为其他高层模块的基础设施，确保系统的可靠性和可扩展性。
+## 模块概述 (Core Purpose)
 
-## 核心组件
+SyCore 是 SyPlugins 框架的最基础模块，定义了全局共享的 Gameplay Tag 结构，并提供了实体唯一标识 (`Identifier`) 和模块间通信 (`MessageBus`) 等核心基础设施服务。该模块作为所有其他 SyPlugins 高层模块的基础，确保系统的可靠性、一致性和可扩展性。
 
-### MessageBus（消息总线）
-- 实现模块间通信
-- 支持消息订阅和发布
-- 提供消息优先级机制
+## 关键职责 (Key Responsibilities)
 
-### Identifier（标识系统）
-- 生成唯一标识符
-- 管理对象引用
-- 提供快速查找机制
+*   **定义基础 Gameplay Tag 结构:** 在 `Config/DefaultGameplayTags.ini` 或相关数据资产中定义和维护基础标签树 (e.g., `Sy.`, `Sy.State.`, `Sy.Operation.`)。
+*   **提供标识系统 (`Identifier`):** 通过 `SyIdentityComponent` (或其他机制) 生成和管理实体唯一标识符 (UUID) 和可选别名，支持实体查找和引用。
+*   **提供消息总线 (`MessageBus`):** 实现模块间和实体间的异步消息传递，支持消息订阅、发布和优先级。
+*   **(可选) 定义框架级接口:** 定义 SyPlugins 模块可能需要遵循的基础接口或基类。
+*   **(可选) 基础功能集成:** 封装或暴露基础引擎/插件功能（如 `TagMetadata` 的基础访问）供其他模块统一使用。
 
+## 核心组件与概念 (Core Components & Concepts)
+
+*   **Gameplay Tags:** 系统范围内的核心标识符，定义于配置文件或数据资产中。
+*   **Identifier (标识系统):**
+    *   实现：通常通过 `SyIdentityComponent`。
+    *   功能：管理实体的唯一 `FGuid` 和可选的 `FName` 别名。
+*   **MessageBus (消息总线):**
+    *   实现：包含消息组件（如 `SyMessagingComponent`）和中央总线逻辑。
+    *   消息结构：
+        *   **来源:** 来源身份GameplayTag + 来源标识 (`FGuid`, 别名)。
+        *   **内容:** 消息类型GameplayTag + 具体内容信息（计划使用 `TagMetadata` 定义与Tag关联的内容结构）。
+    *   用途：主要用于事件驱动的逻辑解耦，如 Flow 监听特定消息。
+*   **(Future) `ISyModuleInterface`:** (如果需要) 定义 SyPlugins 模块通用的接口规范。
 
 ## 目录结构
 
@@ -24,57 +34,52 @@ SyCore/
 │   ├── SyCore/
 │   │   ├── Private/
 │   │   │   ├── Foundation/  (基础工具)
-│   │   │   ├── Identity/    (ID和引用管理)
-│   │   │   ├── Messaging/   (消息与事件系统)
+│   │   │   ├── Identity/    (ID和引用管理 - SyIdentityComponent 实现)
+│   │   │   ├── Messaging/   (消息与事件系统 - SyMessagingComponent, MessageBus 实现)
 │   │   │   └── SyCore.cpp
 │   │   └── Public/
 │   │       ├── SyCore.h
 │   │       ├── Foundation/
 │   │       │   └── Utilities/
 │   │       ├── Identity/
-│   │       │   └── ···
+│   │       │   └── (Public Headers: FSyIdentifier, Interfaces)
 │   │       └── Messaging/
-│   │           └── ···
+│   │           └── (Public Headers: FSyMessage, Interfaces)
 │   └── SyCore.Build.cs
 ├── SyCore.uplugin
 └── README.md
 ```
 
-
-## 使用指南
+## 使用指南 (Usage Guide)
 
 ### Identity 身份标识模块
 
-由于 ActorComponent 无法处理 Construction Script，因此 SyIdentityComponent 无法在编辑器中自动初始化
-
-
-相关模块理想的使用流程如下
-1. 项目根据自身使用需求，构建通用Actor模板，后续所有含逻辑Actor继承自该模板
-2. 在Actor模板中添加SyEntityComponent组件，随后自动添加Identity、Messaging等组件
-3. 在Actor的Construction Script中调用SyEntity的初始化逻辑，调用到Identity的初始化，相关初始化逻辑继承
-4. 设计师为具体BPActor配置默认的GameplayTag，确定作用域（NPC、敌人、关卡元件）
-5. 设计师拖拽BP进入场景，BP自动生成UUID，并完成Identifier的初始化，支持后续消息组件能基于Identity组件与消息总线通信
-
+*   **初始化:** 由于 ActorComponent 限制，`SyIdentityComponent` 通常需要在 Actor 的 Construction Script 或 `BeginPlay` 中显式调用初始化逻辑（例如，通过宿主 Actor 或 `SyEntityComponent` 触发），以生成或分配 UUID。
+*   **依赖:** 消息系统等依赖于 Identity 组件的有效初始化。
+*   **配置:** 可在 Actor 模板或实例上配置代表实体类型的 Gameplay Tag。
 
 ### MessageBus 消息总线
 
-包含消息组件和用于转发消息的总线，消息发送依赖于消息组件和Identity组件初始化完成
+*   **初始化:** 依赖于 `SyIdentityComponent` 和消息组件的初始化。
+*   **发送:** 通过消息组件接口发送结构化的 `FSyMessage`。
+*   **监听:** 其他系统（如 `SyFlow`, `SyQuest`）通过 MessageBus 订阅感兴趣的来源 Tag 或消息 Tag。
 
-消息包含两个部分
-- 消息来源：来源身份GameplayTag + 标识（UID和别名）
-- 消息内容：消息类型GameplayTag + 内容信息（允许基于TagMetadata插件实现对Tag对应内容的标记，TODO实现）
+## 依赖关系 (Dependencies)
 
-总线的输出主要流向 任务、蓝图、事实 等监听性质的系统，自身通常不需要处理状态管理，主要整转发；后续各自模块的状态记录各自实现
+*   `Core`
+*   `CoreUObject`
+*   `GameplayTags`
+*   `TagMetadata` (用于消息内容定义和基础功能暴露)
 
-在模块下可以实现部分几个Flow的监听节点：
-- 基于来源监听，输出消息
-- 基于消息监听，输出来源
-- 基于来源、消息的组合监听
-回头检查下如何实现2.0更新后带数值端口的节点（）
+## 使用建议与最佳实践 (Usage Notes/Guidelines)
 
+*   所有其他 SyPlugins 模块都应依赖于 `SyCore`。
+*   保持 `SyCore` 的基础性，避免在此处添加高层业务逻辑。
+*   Gameplay Tag 的管理应集中进行，保持结构清晰。
+*   优先使用消息通信实现模块解耦。
+*   正确管理组件（Identity, Messaging）的生命周期和初始化顺序。
 
-## 最佳实践
-1. 使用接口而非直接引用
-2. 优先使用消息通信
-3. 保持状态简单且原子
-4. 正确管理组件生命周期
+## 未来考虑 (Future Considerations)
+
+*   可能会添加全局配置 Subsystem 来管理 SyPlugins 范围内的通用设置。
+*   完善 `TagMetadata` 在消息内容结构化方面的应用。
