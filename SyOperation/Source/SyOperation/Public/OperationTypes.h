@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h"
+#include "SyStateCore/Public/EntityStateTypes.h"
 #include "OperationTypes.generated.h"
 
 /**
@@ -39,7 +40,8 @@ struct SYOPERATION_API FSyOperationSource
 /**
  * FSyOperationModifier - 操作修饰器
  * 
- * 定义操作的修饰方式，包含修饰器类型标签和参数
+ * 定义操作的修饰方式，包含多个状态修改
+ * 每个状态修改由状态标签和对应的参数数组组成
  */
 USTRUCT(BlueprintType)
 struct SYOPERATION_API FSyOperationModifier
@@ -49,20 +51,46 @@ struct SYOPERATION_API FSyOperationModifier
     /** 默认构造函数 */
     FSyOperationModifier() = default;
 
-    /** 从标签构造 */
+    /** 从修饰器标签构造 */
     FSyOperationModifier(const FGameplayTag& InModifierTag) : ModifierTag(InModifierTag) {}
 
-    /** 从标签和参数构造 */
-    FSyOperationModifier(const FGameplayTag& InModifierTag, const FSyInstancedStruct& InParameters)
-        : ModifierTag(InModifierTag), Parameters(InParameters) {}
+    /** 从修饰器标签和状态修改映射构造 */
+    FSyOperationModifier(const FGameplayTag& InModifierTag, const TMap<FGameplayTag, FSyStateParams>& InStateModifications)
+        : ModifierTag(InModifierTag), StateModifications(InStateModifications) {}
 
     /** 修饰器类型标签 */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Modifier")
     FGameplayTag ModifierTag;
 
-    /** 修饰器参数 */
+    /** 状态修改映射：状态标签 -> 参数数组 */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Modifier")
-    FSyInstancedStruct Parameters;
+    TMap<FGameplayTag, FSyStateParams> StateModifications;
+
+    /** 添加状态修改 */
+    void AddStateModification(const FGameplayTag& StateTag, const FSyInstancedStruct& Parameters)
+    {
+        FSyStateParams& StateParams = StateModifications.FindOrAdd(StateTag);
+        StateParams.AddParam(Parameters);
+    }
+
+    /** 添加多个状态修改 */
+    void AddStateModifications(const FGameplayTag& StateTag, const TArray<FSyInstancedStruct>& Parameters)
+    {
+        FSyStateParams& StateParams = StateModifications.FindOrAdd(StateTag);
+        StateParams.AddParams(Parameters);
+    }
+
+    /** 清除所有状态修改 */
+    void ClearStateModifications()
+    {
+        StateModifications.Empty();
+    }
+
+    /** 清除特定状态标签的修改 */
+    void ClearStateModificationsForTag(const FGameplayTag& StateTag)
+    {
+        StateModifications.Remove(StateTag);
+    }
 };
 
 /**

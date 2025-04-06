@@ -23,7 +23,6 @@ public:
 private:
     /** 处理Tag变更 */
     void OnSourceTagChanged();
-    void OnModifierTagChanged();
     void OnTargetTagChanged();
 
     /** 获取当前编辑的对象 */
@@ -34,7 +33,6 @@ private:
 
     /** 属性句柄 */
     TSharedPtr<IPropertyHandle> SourceTypeTagHandle;
-    TSharedPtr<IPropertyHandle> ModifierTagHandle;
     TSharedPtr<IPropertyHandle> TargetTypeTagHandle;
 
     /** DetailBuilder引用 */

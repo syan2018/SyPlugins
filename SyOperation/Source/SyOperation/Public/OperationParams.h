@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "OperationParams.generated.h"
 
+// 这里的东西基本都是要删掉的，我们根本不会用状态系统来处理这么细的逻辑，战斗逻辑交给GAS（（
+
 /**
  * FDamageParams - 伤害参数
  * 

@@ -39,16 +39,6 @@ void FSyOperationDetailsCustomization::CustomizeDetails(IDetailLayoutBuilder& De
         SourceTypeTagHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FSyOperationDetailsCustomization::OnSourceTagChanged));
     }
 
-    // 自定义Modifier部分
-    IDetailCategoryBuilder& ModifierCategory = DetailBuilder.EditCategory("Modifier");
-    ModifierTagHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(FSyOperation, Modifier.ModifierTag));
-    TSharedPtr<IPropertyHandle> ModifierParametersHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(FSyOperation, Modifier.Parameters));
-
-    if (ModifierTagHandle.IsValid() && ModifierParametersHandle.IsValid())
-    {
-        ModifierTagHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FSyOperationDetailsCustomization::OnModifierTagChanged));
-    }
-
     // 自定义Target部分
     IDetailCategoryBuilder& TargetCategory = DetailBuilder.EditCategory("Target");
     TargetTypeTagHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(FSyOperation, Target.TargetTypeTag));
@@ -78,23 +68,6 @@ void FSyOperationDetailsCustomization::OnSourceTagChanged()
     }
 }
 
-void FSyOperationDetailsCustomization::OnModifierTagChanged()
-{
-    if (FSyOperation* Operation = GetOperationBeingEdited())
-    {
-        FGameplayTag CurrentTag;
-        if (ModifierTagHandle.IsValid())
-        {
-            FString TagString;
-            if (ModifierTagHandle->GetValue(TagString) == FPropertyAccess::Success)
-            {
-                CurrentTag = FGameplayTag::RequestGameplayTag(FName(*TagString));
-            }
-        }
-        
-        USyOperationEditorUtils::UpdateInstancedStructTypeForTag(Operation->Modifier.Parameters, CurrentTag);
-    }
-}
 
 void FSyOperationDetailsCustomization::OnTargetTagChanged()
 {

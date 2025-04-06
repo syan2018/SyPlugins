@@ -26,6 +26,12 @@ public class SyStateCore : ModuleRules
 			new string[]
 			{
 				"Core",
+				"CoreUObject",
+				"Engine",
+				"GameplayTags",
+				"StructUtils",
+				"SyCore",
+				"TagMetadata",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -34,8 +40,6 @@ public class SyStateCore : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"CoreUObject",
-				"Engine",
 				"Slate",
 				"SlateCore",
 				// ... add private dependencies that you statically link with here ...	
