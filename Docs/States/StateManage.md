@@ -30,7 +30,7 @@
 
 *(需要更新图表以反映 Schema Metadata 查询和 FInstancedStruct 参数传递)*
 
-![Updated State Management Architecture Diagram](images/StateManage.png) *(示意图路径)*
+![Updated State Management Architecture Diagram](Images/StateManage.png) *(示意图路径)*
 
 ---
 
