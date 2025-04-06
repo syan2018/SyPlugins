@@ -2,6 +2,7 @@
 
 #include "StateMetadataTypes.h"
 #include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h"
+#include "DS_TagMetadata.h"
 
 // USyStateMetadataBase
 USyStateMetadataBase::USyStateMetadataBase()
@@ -17,6 +18,7 @@ USyTagStateMetadata::USyTagStateMetadata()
 
 void USyTagStateMetadata::InitializeFromParams(const FSyInstancedStruct& InitParams)
 {
+    // 使用类型安全的参数访问
     if (const FGameplayTag* TagValue = InitParams.GetPtr<FGameplayTag>())
     {
         Value = *TagValue;
@@ -25,6 +27,7 @@ void USyTagStateMetadata::InitializeFromParams(const FSyInstancedStruct& InitPar
 
 void USyTagStateMetadata::ApplyModification(const FSyInstancedStruct& ModificationParams)
 {
+    // 使用类型安全的参数访问
     if (const FGameplayTag* TagValue = ModificationParams.GetPtr<FGameplayTag>())
     {
         Value = *TagValue;

@@ -1,9 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "EntityStateTypes.h"
-
-#include "DS_TagMetadata.h"
 #include "StateMetadataTypes.h"
+#include "DS_TagMetadata.h"
 
 void FSyEntityState::ApplyInitData(const FSyEntityInitData& InitData)
 {
@@ -19,14 +18,15 @@ void FSyEntityState::ApplyInitData(const FSyEntityInitData& InitData)
         // 应用每个初始化参数
         for (const FSyInstancedStruct& InitParam : StateParams.Params)
         {
-            // 从TagMetadata系统获取元数据类型
-            if (UO_TagMetadata* MetadataTemplate = UDS_TagMetadata::GetTagMetadataByClass(StateTag, USyStateMetadataBase::StaticClass()))
+            // 从TagMetadata系统获取元数据实例列表
+            TArray<UO_TagMetadata*> MetadataList = UDS_TagMetadata::GetTagMetadata(StateTag);
+            
+            // 遍历所有元数据实例
+            for (UO_TagMetadata* Metadata : MetadataList)
             {
-                // 创建新的元数据对象
-                if (USyStateMetadataBase* StateMetadata = Cast<USyStateMetadataBase>(
-                    NewObject<UO_TagMetadata>(GetTransientPackage(), MetadataTemplate->GetClass())))
+                // 初始化元数据对象
+                if (USyStateMetadataBase* StateMetadata = Cast<USyStateMetadataBase>(Metadata))
                 {
-                    // 初始化元数据对象
                     StateMetadata->SetStateTag(StateTag);
                     StateMetadata->InitializeFromParams(InitParam);
                     MetadataArray.AddMetadata(StateMetadata);
@@ -50,15 +50,18 @@ void FSyEntityState::ApplyStateModifications(const TMap<FGameplayTag, FSyStatePa
             // 应用每个修改参数到所有匹配的元数据对象
             for (const FSyInstancedStruct& ModParam : StateParams.Params)
             {
-                // 从TagMetadata系统获取元数据类型
-                if (UO_TagMetadata* MetadataTemplate = UDS_TagMetadata::GetTagMetadataByClass(StateTag, USyStateMetadataBase::StaticClass()))
+                // 从TagMetadata系统获取元数据实例列表
+                TArray<UO_TagMetadata*> MetadataList = UDS_TagMetadata::GetTagMetadata(StateTag);
+                
+                // 遍历所有元数据实例
+                for (UO_TagMetadata* Metadata : MetadataList)
                 {
                     // 查找匹配类型的元数据对象
-                    for (TObjectPtr<UO_TagMetadata>& Metadata : MetadataArray->MetadataArray)
+                    for (TObjectPtr<UO_TagMetadata>& ExistingMetadata : MetadataArray->MetadataArray)
                     {
-                        if (USyStateMetadataBase* StateMetadata = Cast<USyStateMetadataBase>(Metadata))
+                        if (USyStateMetadataBase* StateMetadata = Cast<USyStateMetadataBase>(ExistingMetadata))
                         {
-                            if (StateMetadata->GetClass() == MetadataTemplate->GetClass())
+                            if (StateMetadata->GetClass() == Metadata->GetClass())
                             {
                                 // 应用修改
                                 StateMetadata->ApplyModification(ModParam);
@@ -69,4 +72,4 @@ void FSyEntityState::ApplyStateModifications(const TMap<FGameplayTag, FSyStatePa
             }
         }
     }
-} 
+}

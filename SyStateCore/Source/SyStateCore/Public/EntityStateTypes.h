@@ -224,4 +224,4 @@ struct SYSTATECORE_API FSyEntityInitData
     {
         InitialState.Empty();
     }
-}; 
+};

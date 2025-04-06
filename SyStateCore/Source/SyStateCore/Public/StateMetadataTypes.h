@@ -5,13 +5,14 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "O_TagMetadata.h"
-#include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h"
 #include "StateMetadataTypes.generated.h"
 
+struct FSyInstancedStruct;
 /**
  * USyStateMetadataBase - 状态元数据基类
  * 
- * 所有状态元数据类的基类，提供基本的状态属性和功能
+ * 所有状态元数据的基类，继承自UO_TagMetadata
+ * 提供状态标签和参数处理的基本功能
  */
 UCLASS(Abstract, Blueprintable)
 class SYSTATECORE_API USyStateMetadataBase : public UO_TagMetadata
@@ -22,11 +23,11 @@ public:
     /** 构造函数 */
     USyStateMetadataBase();
 
-    /** 从初始化参数创建状态元数据对象 */
-    virtual void InitializeFromParams(const FSyInstancedStruct& InitParams) {}
+    /** 从参数初始化元数据 */
+    virtual void InitializeFromParams(const FSyInstancedStruct& InitParams) PURE_VIRTUAL(USyStateMetadataBase::InitializeFromParams,);
 
-    /** 应用状态修改 */
-    virtual void ApplyModification(const FSyInstancedStruct& ModificationParams) {}
+    /** 应用修改参数 */
+    virtual void ApplyModification(const FSyInstancedStruct& ModificationParams) PURE_VIRTUAL(USyStateMetadataBase::ApplyModification,);
 
     /** 获取状态标签 */
     UFUNCTION(BlueprintPure, Category = "SyStateCore|StateMetadata")
@@ -43,15 +44,9 @@ protected:
 };
 
 /**
- * USyBooleanStateMetadata - 布尔状态元数据（已删除）
- * 
- * 可以尝试使用Struct封装部分结构体来作为 Metadata，使用原生类型会无法转换（
- */
-
-/**
  * USyTagStateMetadata - 标签状态元数据
  * 
- * 用于存储GameplayTag类型的状态数据
+ * 用于存储GameplayTag类型的状态值
  */
 UCLASS(Blueprintable)
 class SYSTATECORE_API USyTagStateMetadata : public USyStateMetadataBase
@@ -62,22 +57,22 @@ public:
     /** 构造函数 */
     USyTagStateMetadata();
 
-    /** 从初始化参数创建状态元数据对象 */
+    /** 从参数初始化元数据 */
     virtual void InitializeFromParams(const FSyInstancedStruct& InitParams) override;
 
-    /** 应用状态修改 */
+    /** 应用修改参数 */
     virtual void ApplyModification(const FSyInstancedStruct& ModificationParams) override;
 
     /** 获取标签值 */
-    UFUNCTION(BlueprintPure, Category = "SyStateCore|TagState")
-    FGameplayTag GetTagValue() const { return Value; }
+    UFUNCTION(BlueprintPure, Category = "SyStateCore|TagStateMetadata")
+    FGameplayTag GetValue() const { return Value; }
 
     /** 设置标签值 */
-    UFUNCTION(BlueprintCallable, Category = "SyStateCore|TagState")
-    void SetTagValue(const FGameplayTag& InValue) { Value = InValue; }
+    UFUNCTION(BlueprintCallable, Category = "SyStateCore|TagStateMetadata")
+    void SetValue(const FGameplayTag& InValue) { Value = InValue; }
 
 protected:
     /** 标签值 */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyStateCore|TagState")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyStateCore|TagStateMetadata")
     FGameplayTag Value;
-}; 
+};
