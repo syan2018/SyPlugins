@@ -30,6 +30,7 @@ public class SyCore : ModuleRules
 				"Engine",
 				"GameplayTags",
 				"InputCore",
+				"StructUtils",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
