@@ -9,20 +9,21 @@
 #include "EntityStateTypes.generated.h"
 
 /**
- * FSyStateMetadataArray - 状态元数据数组
+ * FSyStateMetadatas - 状态元数据数组
  * 
  * 用于存储特定状态标签的多个元数据对象
+ * 处理运行时元数据对象 UObject
  */
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyStateMetadataArray
+struct SYSTATECORE_API FSyStateMetadatas
 {
     GENERATED_BODY()
 
     /** 默认构造函数 */
-    FSyStateMetadataArray() = default;
+    FSyStateMetadatas() = default;
 
     /** 从元数据对象数组构造 */
-    FSyStateMetadataArray(const TArray<TObjectPtr<UO_TagMetadata>>& InMetadataArray)
+    FSyStateMetadatas(const TArray<TObjectPtr<UO_TagMetadata>>& InMetadataArray)
         : MetadataArray(InMetadataArray) {}
 
     /** 元数据对象数组 */
@@ -55,6 +56,8 @@ struct SYSTATECORE_API FSyStateMetadataArray
  * FSyStateParams - 状态参数
  * 
  * 用于存储对特定状态标签的多个参数
+ * TODO: 构造编辑器，实现基于Tag快速初始化
+ * 不过逻辑可能有点微妙，是不是得做在储存 TMap<FGameplayTag, FSyStateParams> 的地方 
  */
 USTRUCT(BlueprintType)
 struct SYSTATECORE_API FSyStateParams
@@ -92,27 +95,28 @@ struct SYSTATECORE_API FSyStateParams
 };
 
 /**
- * FSyEntityState - 实体状态
+ * FSyStateCategories - 状态集合
  * 
- * 存储实体的完整状态数据，使用GameplayTag作为键，TagMetadata对象作为值
+ * 存储完整状态数据，使用GameplayTag作为键，TagMetadata对象作为值 
+ * 后续常用作储存实体状态，以及实现 StateManager 中相关容器
  */
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyEntityState
+struct SYSTATECORE_API FSyStateCategories
 {
     GENERATED_BODY()
 
     /** 默认构造函数 */
-    FSyEntityState() = default;
+    FSyStateCategories() = default;
 
     /** 状态数据映射：状态标签 -> TagMetadata对象数组 */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyStateCore|EntityState", Transient)
-    TMap<FGameplayTag, FSyStateMetadataArray> StateData;
+    TMap<FGameplayTag, FSyStateMetadatas> StateData;
 
     /** 查找指定标签的第一个指定类型的元数据对象 */
     template<typename T>
     T* FindFirstStateMetadata(const FGameplayTag& StateTag) const
     {
-        if (const FSyStateMetadataArray* MetadataArray = StateData.Find(StateTag))
+        if (const FSyStateMetadatas* MetadataArray = StateData.Find(StateTag))
         {
             for (const TObjectPtr<UO_TagMetadata>& Metadata : MetadataArray->MetadataArray)
             {
@@ -130,7 +134,7 @@ struct SYSTATECORE_API FSyEntityState
     TArray<T*> GetAllStateMetadata(const FGameplayTag& StateTag) const
     {
         TArray<T*> Result;
-        if (const FSyStateMetadataArray* MetadataArray = StateData.Find(StateTag))
+        if (const FSyStateMetadatas* MetadataArray = StateData.Find(StateTag))
         {
             for (const TObjectPtr<UO_TagMetadata>& Metadata : MetadataArray->MetadataArray)
             {
@@ -148,7 +152,7 @@ struct SYSTATECORE_API FSyEntityState
     {
         if (Metadata)
         {
-            FSyStateMetadataArray& MetadataArray = StateData.FindOrAdd(StateTag);
+            FSyStateMetadatas& MetadataArray = StateData.FindOrAdd(StateTag);
             MetadataArray.AddMetadata(Metadata);
         }
     }
@@ -156,7 +160,7 @@ struct SYSTATECORE_API FSyEntityState
     /** 移除状态元数据对象 */
     bool RemoveStateMetadata(const FGameplayTag& StateTag, UO_TagMetadata* Metadata)
     {
-        if (FSyStateMetadataArray* MetadataArray = StateData.Find(StateTag))
+        if (FSyStateMetadatas* MetadataArray = StateData.Find(StateTag))
         {
             return MetadataArray->MetadataArray.Remove(Metadata) > 0;
         }
@@ -185,7 +189,8 @@ struct SYSTATECORE_API FSyEntityState
 /**
  * FSyEntityInitData - 实体初始化数据
  * 
- * 定义实体初始化时的基础状态配置
+ * 定义实体初始化时的基础状态配置 
+ * TODO: 搬迁至SyEntity 
  */
 USTRUCT(BlueprintType)
 struct SYSTATECORE_API FSyEntityInitData

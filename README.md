@@ -41,24 +41,64 @@ flowchart TD
 
 ## 插件层级
 1. **SyCore**
-   - 核心功能模块集合
-   - 包含基础设施、Id系统、消息系统等
-   - 详见 [SyCore/README.md](SyCore/README.md)
+   - 系统的基础设施模块
+   - 提供实体唯一标识（Identifier）系统
+   - 实现模块间通信的消息总线（MessageBus）
+   - 定义部分核心数据结构
+   - 作为所有其他SyPlugins模块的基础依赖
 
-2. **SyEntity/SyGameplay**
+2. **SyStateCore**
+   - 状态系统的核心定义模块
+   - 定义实体状态的数据结构（FSyEntityState）
+   - 提供状态初始化配置（FSyEntityInitData）
+   - 定义各种状态元数据类（拓展UO_TagMetadata）
+   - 提供状态数据的访问接口
+
+3. **SyStateManager**
+   - 状态管理的中心化模块
+   - 提供状态变更记录和分发机制
+   - 实现状态同步的权威来源
+   - 管理状态变更记录（FSyStateModificationRecord）
+   - 提供状态查询和事件通知
+
+4. **SyOperation**
+   - 状态操作定义模块
+   - 定义状态变更操作的数据结构
+   - 提供参数Schema系统
+   - 实现常用参数结构体
+   - 支持编辑器配置和验证
+
+5. **SyEntity**
+   - 通用实体框架模块
+   - 提供基于组件的实体管理框架
+   - 实现实体状态管理（通过SyStateComponent）
+   - 支持非侵入式的Actor扩展
+   - 提供实体注册和查询功能
+
+6. **SyFlowImpl**
+   - Flow插件实现模块
+   - 提供SyPlugins功能的图形化节点
+   - 实现消息系统的Flow节点集成
+   - 支持实体控制的Flow节点（计划中）
+   - 使SyPlugins功能更易于组合和使用
+
+7. **SyPluginsImpl**
+   - 插件实现示例模块
+   - 对示例使用的GameplayTag结构等进行汇总
+   - 提供具体功能实现参考
+   - 展示模块间的集成方式
+
+8. **SyQuest**（计划中）
+   - 任务系统实现
+   - 基于状态和条件驱动的任务更新
+   - 依赖于SyCore和SyEntity模块
+   - 提供任务逻辑和状态管理
+
+9. **SyGameplay**（计划中）
    - 游戏玩法框架
-   - 构建在 SyCore 之上的游戏系统
-   - 提供实体、交互等高层功能
-
-3. **SyFlowImpl**
-
-   - 通过拓展Flow插件实现对流程的基本管理
-   - 其它核心模块的参考串联方案
-
-4. **SyQuest**
-   - 任务系统实现（待确定是否制作及制作形式）
-   - 依赖于前两组模块
-   - 处理任务逻辑和状态
+   - 构建在SyEntity之上的具体游戏系统
+   - 提供实体交互等高层功能
+   - 实现具体的游戏机制
 
 ## 关键特性
 - **状态管理系统**: 统一的状态转换和管理机制

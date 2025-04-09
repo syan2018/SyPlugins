@@ -4,7 +4,7 @@
 #include "StateMetadataTypes.h"
 #include "DS_TagMetadata.h"
 
-void FSyEntityState::ApplyInitData(const FSyEntityInitData& InitData)
+void FSyStateCategories::ApplyInitData(const FSyEntityInitData& InitData)
 {
     // 遍历所有初始化数据
     for (const auto& StatePair : InitData.InitialState)
@@ -13,7 +13,7 @@ void FSyEntityState::ApplyInitData(const FSyEntityInitData& InitData)
         const FSyStateParams& StateParams = StatePair.Value;
 
         // 获取或创建该状态标签的元数据数组
-        FSyStateMetadataArray& MetadataArray = StateData.FindOrAdd(StateTag);
+        FSyStateMetadatas& MetadataArray = StateData.FindOrAdd(StateTag);
 
         // 应用每个初始化参数
         for (const FSyInstancedStruct& InitParam : StateParams.Params)
@@ -36,7 +36,7 @@ void FSyEntityState::ApplyInitData(const FSyEntityInitData& InitData)
     }
 }
 
-void FSyEntityState::ApplyStateModifications(const TMap<FGameplayTag, FSyStateParams>& StateModifications)
+void FSyStateCategories::ApplyStateModifications(const TMap<FGameplayTag, FSyStateParams>& StateModifications)
 {
     // 遍历所有状态修改
     for (const auto& StatePair : StateModifications)
@@ -45,7 +45,7 @@ void FSyEntityState::ApplyStateModifications(const TMap<FGameplayTag, FSyStatePa
         const FSyStateParams& StateParams = StatePair.Value;
 
         // 获取该状态标签的元数据数组
-        if (FSyStateMetadataArray* MetadataArray = StateData.Find(StateTag))
+        if (FSyStateMetadatas* MetadataArray = StateData.Find(StateTag))
         {
             // 应用每个修改参数到所有匹配的元数据对象
             for (const FSyInstancedStruct& ModParam : StateParams.Params)
