@@ -1,30 +1,37 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "StateMetadataTypes.h"
-#include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h"
 #include "Logging/LogMacros.h"
+#include "StructUtils/InstancedStruct.h"
 
-// Define a log category if you don't have one already
-// DECLARE_LOG_CATEGORY_EXTERN(LogSyStateCore, Log, All);
-// DEFINE_LOG_CATEGORY(LogSyStateCore);
-
-// USyStateMetadataBase
 USyStateMetadataBase::USyStateMetadataBase()
 {
-    // 默认构造函数
 }
 
-void USyStateMetadataBase::InitializeFromParams(const FSyInstancedStruct& InitParams)
+void USyStateMetadataBase::InitializeFromParams(const FInstancedStruct& InitParams)
 {
     ValidateAndProcessParams(InitParams, TEXT("InitializeFromParams"));
 }
 
-void USyStateMetadataBase::ApplyModification(const FSyInstancedStruct& ModificationParams)
+void USyStateMetadataBase::ApplyModification(const FInstancedStruct& ModificationParams)
 {
     ValidateAndProcessParams(ModificationParams, TEXT("ApplyModification"));
 }
 
-bool USyStateMetadataBase::ValidateAndProcessParams(const FSyInstancedStruct& Params, const TCHAR* OperationName)
+void USyStateMetadataBase::SetValueStruct_Implementation(const FInstancedStruct& InValue)
+{
+    if (InValue.IsValid() && InValue.GetScriptStruct() == GetValueDataType())
+    {
+        // 子类应该重载此方法以处理具体的值设置
+        UE_LOG(LogTemp, Warning, TEXT("SetValueStruct called on base class %s, which doesn't implement value setting"), *GetNameSafe(this));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SetValueStruct failed: Type mismatch for %s"), *GetNameSafe(this));
+    }
+}
+
+bool USyStateMetadataBase::ValidateAndProcessParams(const FInstancedStruct& Params, const TCHAR* OperationName)
 {
     if (!Params.IsValid())
     {
@@ -42,32 +49,37 @@ bool USyStateMetadataBase::ValidateAndProcessParams(const FSyInstancedStruct& Pa
         return false;
     }
 
-    UpdateValue(Params);
+    SetValueStruct(Params);
     return true;
 }
 
-// USyTagStateMetadata
 USyTagStateMetadata::USyTagStateMetadata()
 {
-    // 默认构造函数
 }
 
-UScriptStruct* USyTagStateMetadata::GetValueDataType() const
+UScriptStruct* USyTagStateMetadata::GetValueDataType_Implementation() const
 {
     return FGameplayTag::StaticStruct();
 }
 
-void USyTagStateMetadata::UpdateValue(const FSyInstancedStruct& Params)
+FInstancedStruct USyTagStateMetadata::GetValueStruct_Implementation() const
 {
-    if (const FGameplayTag* TagValue = Params.GetPtr<FGameplayTag>())
+    FInstancedStruct Result;
+    Result.InitializeAs<FGameplayTag>(Value);
+    return Result;
+}
+
+void USyTagStateMetadata::SetValueStruct_Implementation(const FInstancedStruct& InValue)
+{
+    if (InValue.IsValid() && InValue.GetScriptStruct() == FGameplayTag::StaticStruct())
     {
-        Value = *TagValue;
+        if (const FGameplayTag* TagValue = InValue.GetPtr<FGameplayTag>())
+        {
+            Value = *TagValue;
+        }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("UpdateValue failed to get pointer for %s despite matching types: Expected %s, Got %s"),
-            *GetNameSafe(this),
-            *GetNameSafe(GetValueDataType()),
-            *GetNameSafe(Params.GetScriptStruct()));
+        UE_LOG(LogTemp, Warning, TEXT("SetValueStruct failed: Type mismatch for %s"), *GetNameSafe(this));
     }
-} 
+}

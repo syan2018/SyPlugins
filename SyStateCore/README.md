@@ -2,22 +2,24 @@
 
 ## Core Purpose
 
-定义与实体状态表示和初始化相关的数据结构，以及承载具体状态数据的 `UO_TagMetadata` 基类和子类。
+定义与实体状态表示和初始化相关的数据结构，以及承载具体状态数据的 `USyStateMetadataBase` 基类和子类。本模块提供了状态管理系统的核心数据结构和类型，支持通过 GameplayTag 系统进行状态分类和管理。
 
 ## Key Responsibilities
 
-*   定义实体当前运行时状态的数据容器 (`FSyEntityState`)。
-*   定义实体初始化时使用的状态配置结构 (`FSyEntityInitData`)。
-*   提供各种用于承载具体状态数据的 `UO_TagMetadata` 子类（如 `USyHealthMetadata`, `USyStatusEffectMetadata` 等）的定义。
-*   定义用于 `FSyEntityInitData` 的初始化参数 `USTRUCT`（如 `FHealthInitParams`）。
-*   提供访问 `FSyEntityState` 中状态数据的辅助函数或接口（可选）。
+*   定义实体当前运行时状态的数据容器 (`FSyStateCategories`)。
+*   （临时）定义实体初始化时使用的状态配置结构 (`FSyEntityInitData`)。
+*   提供各种用于承载具体状态数据的 `USyStateMetadataBase` 子类（如 `USyTagStateMetadata` 等）的定义。
+*   定义用于 `FSyEntityInitData` 的初始化参数 `USTRUCT`。
+*   提供访问 `FSyStateCategories` 中状态数据的辅助函数或接口。
 
 ## Core Concepts & Types
 
-*   **`FSyEntityState`:** 包含 `TMap<FGameplayTag, TArray<TObjectPtr<UO_TagMetadata>>>`，用于存储实体运行时状态对象实例。
-*   **`FSyEntityInitData`:** 包含 `TMap<FGameplayTag, TArray<FInstancedStruct>>`，用于在编辑器或蓝图中配置实体初始状态的参数。
-*   **`UO_TagMetadata` (State Subclasses):** 如 `USyHealthMetadata`, `USyManaMetadata`, `USyStatusEffectMetadata` 等，定义具体状态数据的结构和属性。这些类的实例将存储在 `FSyEntityState` 中。
-*   **Initialization Parameter Structs:** 如 `FHealthInitParams`，与 `UO_TagMetadata` 状态子类对应，用于在 `FSyEntityInitData` 中传递初始化值。
+*   **`FSyStateCategories`:** 包含 `TMap<FGameplayTag, FSyStateMetadatas>`，用于存储实体运行时状态对象实例。提供了查找、添加、移除和批量应用状态修改的方法。
+*   **`FSyStateMetadatas`:** 包含 `TArray<TObjectPtr<UO_TagMetadata>>`，用于存储特定状态标签的多个元数据对象。
+*   **`FSyStateParams`:** 包含 `TArray<FInstancedStruct>`，用于存储对特定状态标签的多个参数。
+*   **`FSyEntityInitData`:** 包含 `TMap<FGameplayTag, FSyStateParams>`，用于在编辑器或蓝图中配置实体初始状态的参数。
+*   **`USyStateMetadataBase`:** 所有状态元数据的基类，继承自 `UO_TagMetadata`，提供状态标签和参数处理的基本功能。支持通过 `GetValueStruct` 和 `SetValueStruct` 方法在蓝图中访问和修改状态值。
+*   **`USyTagStateMetadata`:** 用于存储 GameplayTag 类型的状态值，是 `USyStateMetadataBase` 的具体实现。
 
 ## Dependencies
 
@@ -29,11 +31,37 @@
 
 ## Usage Notes/Guidelines
 
-*   当需要为实体添加新的状态类型时（如“怒气值”），应在此模块中创建新的 `UO_TagMetadata` 子类（如 `USyRageMetadata`）和可选的初始化参数 `USTRUCT`。
-*   `FSyEntityState` 中的 `UO_TagMetadata` 对象实例由 `USyStateComponent` (SyEntity 模块) 负责创建和管理。
-*   `FSyEntityInitData` 主要用于配置和初始化，运行时状态由 `FSyEntityState` 表示。
+*   当需要为实体添加新的状态类型时（如"怒气值"），应在此模块中创建新的 `USyStateMetadataBase` 子类（如 `USyRageMetadata`）和可选的初始化参数 `USTRUCT`。
+*   `FSyStateCategories` 中的 `UO_TagMetadata` 对象实例由 `USyStateComponent` (SyEntity 模块) 负责创建和管理。
+*   `FSyEntityInitData` 主要用于配置和初始化，运行时状态由 `FSyStateCategories` 表示。
+*   使用 `GetValueStruct` 和 `SetValueStruct` 方法在蓝图中访问和修改状态值。
+*   使用 `GetValue<T>()` 和 `SetValue<T>()` 模板方法在 C++ 中访问和修改状态值。
+
+蓝图拓展可参考 Content\SM_StateMetadataSample.uasset
+
+## Implementation Details
+
+### 状态元数据基类 (USyStateMetadataBase)
+
+`USyStateMetadataBase` 是所有状态元数据的基类，提供了以下关键功能：
+
+*   **状态标签管理**：通过 `GetStateTag` 和 `SetStateTag` 方法管理状态标签。
+*   **值访问接口**：通过 `GetValueStruct` 和 `SetValueStruct` 方法提供通用的值访问接口。
+*   **类型安全访问**：通过 `GetValue<T>()` 和 `SetValue<T>()` 模板方法提供类型安全的值访问。
+*   **参数处理**：通过 `InitializeFromParams` 和 `ApplyModification` 方法处理初始化和修改参数。
+
+### 状态分类 (FSyStateCategories)
+
+`FSyStateCategories` 是存储实体状态的核心数据结构，提供了以下功能：
+
+*   **状态查找**：通过 `FindFirstStateMetadata` 和 `GetAllStateMetadata` 方法查找特定类型的状态元数据。
+*   **状态管理**：通过 `AddStateMetadata`、`RemoveStateMetadata` 和 `ClearStateMetadata` 方法管理状态元数据。
+*   **批量应用**：通过 `ApplyInitData` 和 `ApplyStateModifications` 方法批量应用初始化和修改。
 
 ## Future Considerations
 
 *   可能添加更通用的状态元数据基类或接口。
 *   优化状态数据的序列化和网络复制（如果需要）。
+*   添加更多类型的状态元数据子类，如 `USyFloatStateMetadata`、`USyIntStateMetadata` 等。
+*   实现状态数据的编辑器工具，简化状态配置和调试。
+*   添加状态数据的验证和约束机制，确保状态数据的一致性。
