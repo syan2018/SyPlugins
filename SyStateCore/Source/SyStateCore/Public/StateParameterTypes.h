@@ -66,6 +66,12 @@ struct SYSTATECORE_API FSyStateParameterSet
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyStateCore|StateParameterSet")
 	TMap<FGameplayTag, FSyStateParams> Parameters; // Renamed from InitialState
 
+	/** 获取状态参数映射的常量引用 */
+	const TMap<FGameplayTag, FSyStateParams>& GetStateParamsMap() const
+	{
+		return Parameters;
+	}
+
 	/** 添加状态参数 */
 	void AddStateParam(const FGameplayTag& StateTag, const FSyInstancedStruct& Param)
 	{

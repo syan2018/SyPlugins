@@ -26,6 +26,10 @@ public class SyStateManager : ModuleRules
 			new string[]
 			{
 				"Core",
+				"GameplayTags",
+				"SyCore",
+				"SyOperation",
+				"SyStateCore",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -37,7 +41,7 @@ public class SyStateManager : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore",
+				"SlateCore"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
