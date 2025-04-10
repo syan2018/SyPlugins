@@ -30,6 +30,8 @@ public class SyEntity : ModuleRules
 				"Engine",
 				"GameplayTags",
 				"SyCore",
+				"SyStateCore",
+				"SyStateManager",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

@@ -51,56 +51,47 @@ bool USyStateManagerSubsystem::RecordOperation(const FSyOperation& Operation)
 
 FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const FGameplayTag& TargetFilterTag /* TODO: 添加 SourceFilterTag */) const
 {
-    FSyStateParameterSet AggregatedParams;
+    FSyStateParameterSet AggregatedResult;
+    // 使用一个临时的Map来聚合参数，处理覆盖逻辑
+    TMap<FGameplayTag, FSyStateParams> AggregatedParamsMap;
 
     // TODO: [拓展] 性能考量: 如果 ModificationLog 非常大，此线性扫描可能成为瓶颈。
     for (const FSyStateModificationRecord& Record : ModificationLog)
     {
         // --- 筛选阶段 ---
+        // 1. TODO: [拓展] 源筛选
 
-        // 1. TODO: [拓展] 源筛选 (Source Filtering)
-        // if (!SourceMatches(Record.Operation.Source, SourceFilterTag))
-        // {
-        //     continue;
-        // }
-
-        // 2. 目标类型筛选 (Target Type Filtering)
-        // 如果 TargetFilterTag 有效，则要求操作的目标类型标签必须精确匹配
+        // 2. 目标类型筛选
         if (TargetFilterTag.IsValid() && Record.Operation.Target.TargetTypeTag != TargetFilterTag)
         {
-             continue; // 不匹配，跳过此记录
+            continue;
         }
-        // 如果 TargetFilterTag 无效 (例如 EmptyTag)，则认为匹配所有目标类型 (取决于具体需求，当前为不筛选)
-        // else if (!TargetFilterTag.IsValid()) { /* 匹配所有 */ }
 
-
-        // 3. TODO: [拓展] 更复杂的目标参数匹配 (Target Parameter Matching)
-        // 可能需要传入目标实体的上下文信息进行比较
-        // if (!TargetParametersMatch(Record.Operation.Target.Parameters, TargetContext))
-        // {
-        //     continue;
-        // }
+        // 3. TODO: [拓展] 更复杂的目标参数匹配
 
         // --- 聚合阶段 ---
-        // 如果记录通过了所有筛选条件，则将其 Modifier 中的 StateModifications 合并到结果中
-
-        // 检查 Operation.Modifier.StateModifications 是否有效以及内部 Map 是否存在
-        // (假设 FSyStateParameterSet 提供了类似 IsValid() 或 GetStateParamsMap() 返回 const 引用/指针的方法)
-        const auto& StateParamsMap = Record.Operation.Modifier.StateModifications.GetStateParamsMap(); // 假设有这个方法
-
-        // 遍历当前记录 Modifier 中的所有状态修改
-        for (const auto& Pair : StateParamsMap)
+        // 将当前记录的 Modifier 参数合并到临时 Map 中
+        // 后出现的记录会覆盖或合并先出现的记录中相同 StateTag 的条目
+        for (const auto& Pair : Record.Operation.Modifier.StateModifications.GetStateParamsMap())
         {
             const FGameplayTag& StateTag = Pair.Key;
-            const TArray<FSyInstancedStruct>& ParamsToAdd = Pair.Value.Params;
-            // 将这些参数添加到聚合结果的对应 StateTag 下
-            AggregatedParams.AddStateParams(StateTag, ParamsToAdd);
+            const FSyStateParams& ParamsToMerge = Pair.Value;
+
+            // 查找临时 Map 中是否已有该 StateTag 的条目
+            FSyStateParams& ExistingParams = AggregatedParamsMap.FindOrAdd(StateTag);
+            
+            // 合并参数：这里简单地追加。如果需要覆盖或更复杂的逻辑，在此修改。
+            // 或者，如果 FSyStateParams 提供了合并方法，则调用该方法。
+            // 注意：直接覆盖可能更符合"后操作覆盖前操作"的语义
+            // ExistingParams = ParamsToMerge; // 直接覆盖
+            ExistingParams.AddParams(ParamsToMerge.Params); // 追加
         }
-        // 或者如果 FSyStateParameterSet 提供了 Append 方法：
-        // AggregatedParams.Append(Record.Operation.Modifier.StateModifications);
     }
 
-    return AggregatedParams;
+    // 将聚合后的 Map 赋值给结果结构体
+    AggregatedResult.Parameters = AggregatedParamsMap;
+
+    return AggregatedResult;
 }
 
 

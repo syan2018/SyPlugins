@@ -3,7 +3,6 @@
 #include "SyCore/Public/Messaging/SyMessageComponent.h"
 #include "Registry/SyEntityRegistry.h"
 #include "States/SyStateComponent.h"
-#include "States/SyStateManager.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 
@@ -61,20 +60,8 @@ void USyEntityComponent::InitializeEntity(bool bForceReinitialization)
     }
     
     
-    // 确保Message组件存在
     EnsureDependentComponents();
     
-    // 创建并添加StateComponent
-    if (!StateComponent)
-    {
-        AActor* Owner = GetOwner();
-        if (Owner)
-        {
-            StateComponent = NewObject<USyStateComponent>(Owner, USyStateComponent::StaticClass());
-            StateComponent->RegisterComponent();
-            ManagedSyComponents.Add(StateComponent);
-        }
-    }
     
     // 查找并收集Owner Actor上所有其他标记为Sy*的组件
     AActor* Owner = GetOwner();
@@ -94,8 +81,8 @@ void USyEntityComponent::InitializeEntity(bool bForceReinitialization)
         }
     }
     
-    // 绑定状态变更事件
-    BindStateChangeDelegate();
+    // 绑定组件委托
+    BindComponentDelegates();
     
     // 处理 Identity
     if (IdentityComponent)
@@ -132,6 +119,18 @@ void USyEntityComponent::EnsureDependentComponents()
         {
             MessageComponent = NewObject<USyMessageComponent>(Owner, USyMessageComponent::StaticClass());
             MessageComponent->RegisterComponent();
+            ManagedSyComponents.Add(MessageComponent);
+        }
+    }
+    // 创建并添加StateComponent
+    if (!StateComponent)
+    {
+        StateComponent = Owner->FindComponentByClass<USyStateComponent>();
+        if (!MessageComponent)
+        {
+            StateComponent = NewObject<USyStateComponent>(Owner, USyStateComponent::StaticClass());
+            StateComponent->RegisterComponent();
+            ManagedSyComponents.Add(StateComponent);
         }
     }
 }
@@ -172,19 +171,28 @@ void USyEntityComponent::UnregisterFromRegistry()
     }
 }
 
-void USyEntityComponent::BindStateChangeDelegate()
+void USyEntityComponent::BindComponentDelegates()
 {
+    // 绑定 StateComponent 的本地数据变更事件
     if (StateComponent)
     {
-        // 假设StateComponent有一个InternalOnStateChanged事件
-        // StateComponent->InternalOnStateChanged.AddDynamic(this, &USyEntityComponent::HandleInternalStateChange);
+        // 先移除旧的绑定（如果有的话），防止重复绑定
+        StateComponent->OnLocalStateDataChanged.RemoveAll(this);
+        // 添加新的绑定
+        StateComponent->OnLocalStateDataChanged.AddUObject(this, &USyEntityComponent::HandleLocalStateDataChanged);
     }
+
+    // TODO: 绑定其他组件（如 IdentityComponent）的事件
+    // if (IdentityComponent)
+    // {
+    //     IdentityComponent->OnIdReadyDelegate.AddUObject(this, &USyEntityComponent::HandleEntityIdReady); // 假设有这样的委托
+    // }
 }
 
-void USyEntityComponent::HandleInternalStateChange(const FGameplayTag& StateTag, bool bNewValue)
+void USyEntityComponent::HandleLocalStateDataChanged()
 {
-    // 广播状态变更事件
-    OnEntityStateChanged.Broadcast(StateTag, bNewValue);
+    // 广播实体状态已更新事件
+    OnEntityStateUpdated.Broadcast();
 }
 
 void USyEntityComponent::HandleEntityIdReady()
@@ -227,24 +235,6 @@ FName USyEntityComponent::GetEntityAlias() const
     }
     
     return NAME_None;
-}
-
-bool USyEntityComponent::GetState(const FGameplayTag& StateTag) const
-{
-    if (StateComponent)
-    {
-        return StateComponent->GetState(StateTag);
-    }
-    
-    return false;
-}
-
-void USyEntityComponent::SetState(const FGameplayTag& StateTag, bool bNewValue, bool bSyncGlobal)
-{
-    if (StateComponent)
-    {
-        StateComponent->SetState(StateTag, bNewValue, bSyncGlobal);
-    }
 }
 
 bool USyEntityComponent::SendMessage(const FGameplayTag& MessageType)

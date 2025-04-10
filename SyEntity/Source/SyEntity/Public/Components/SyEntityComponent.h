@@ -88,19 +88,7 @@ public:
     USyMessageComponent* GetMessageComponent() const { return MessageComponent; }
 
     // --- 状态接口 (代理StateComponent) ---
-public:
-    /**
-     * @brief 获取特定状态的值。
-     */
-    UFUNCTION(BlueprintPure, Category = "SyEntity|State")
-    bool GetState(const FGameplayTag& StateTag) const;
-
-    /**
-     * @brief 设置特定状态的值。
-     * @param bSyncGlobal 是否将此变更同步到全局StateManager。
-     */
-    UFUNCTION(BlueprintCallable, Category = "SyEntity|State")
-    void SetState(const FGameplayTag& StateTag, bool bNewValue, bool bSyncGlobal = true);
+    // 移除了 GetState/SetState 代理，建议直接访问 StateComponent->GetCurrentStateCategories()
 
     // --- 消息接口 (代理MessageComponent) ---
 public:
@@ -118,10 +106,10 @@ public:
 
     // --- 组件间通信 (核心机制) ---
 public:
-    // 当实体状态发生变化时广播 (由StateComponent触发)
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEntityStateChanged, const FGameplayTag&, StateTag, bool, bNewValue);
+    /** 当实体状态数据发生更新时广播 (由 StateComponent 内部事件触发) */
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEntityStateUpdated);
     UPROPERTY(BlueprintAssignable, Category = "SyEntity|Events")
-    FOnEntityStateChanged OnEntityStateChanged;
+    FOnEntityStateUpdated OnEntityStateUpdated;
 
     // 当实体ID生成或有效时广播 (由IdentityComponent触发)
     DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEntityIdReady);
@@ -148,11 +136,11 @@ private:
     bool bRegistered = false; // 是否已注册到Registry
 
     // --- 内部方法 ---
-    void EnsureDependentComponents(); // 确保依赖组件存在（暂时拓展message，其余）
+    void EnsureDependentComponents(); // 确保依赖组件存在
     void RegisterWithRegistry();
     void UnregisterFromRegistry();
-    void BindStateChangeDelegate(); // 绑定StateComponent的内部事件到OnEntityStateChanged
-    void HandleInternalStateChange(const FGameplayTag& StateTag, bool bNewValue); // StateComponent内部事件处理
+    void BindComponentDelegates(); // 重命名，绑定所有组件的委托
+    void HandleLocalStateDataChanged(); // StateComponent 内部事件处理
     void HandleEntityIdReady(); // IdentityComponent ID生成事件处理
 };
 

@@ -70,6 +70,19 @@ public:
     UPROPERTY(BlueprintAssignable, Category="State Management|Events", meta=(DisplayName="On State Modification Recorded"))
     FOnStateModificationRecorded OnStateModificationRecorded;
 
+    // TODO: [拓展] 优化订阅接口 - 允许组件根据更精细的条件订阅，由StateManager进行过滤
+    /**
+    struct FSyTargetFilter // 示例过滤器结构体
+    {
+        FGameplayTag TargetType;
+        FGuid TargetEntityId; // 可选
+        // ... 其他过滤条件 ...
+    };
+    DECLARE_DELEGATE_OneParam(FStateModificationDelegate, const FSyStateModificationRecord&);
+    virtual FDelegateHandle SubscribeByTarget(const FSyTargetFilter& Filter, FStateModificationDelegate Callback);
+    virtual void UnsubscribeByTarget(FDelegateHandle Handle);
+    **/
+
     /**
      * @brief 将当前的操作日志保存到存档文件
      * @return 如果保存成功，返回true。
