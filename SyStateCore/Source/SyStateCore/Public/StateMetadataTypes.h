@@ -25,7 +25,9 @@ public:
     /** 构造函数 */
     USyStateMetadataBase();
 
-    /** 返回此元数据管理的具体数据类型 (USTRUCT) */
+    /** 返回此元数据管理的具体数据类型 (USTRUCT)
+     *  用于编辑器下自适应 FInstancedStruct
+     */
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SyStateCore|StateMetadata")
     UScriptStruct* GetValueDataType() const;
     virtual UScriptStruct* GetValueDataType_Implementation() const { return nullptr; }
@@ -55,6 +57,7 @@ public:
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SyStateCore|StateMetadata")
     void SetValueStruct(const FInstancedStruct& InValue);
     virtual void SetValueStruct_Implementation(const FInstancedStruct& InValue);
+    
 
     /** 尝试获取特定类型的值（C++ 使用） */
     template<typename T>

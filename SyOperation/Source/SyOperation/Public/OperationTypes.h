@@ -52,10 +52,12 @@ struct SYOPERATION_API FSyOperationTarget
 
     /** 默认构造函数 */
     FSyOperationTarget() = default;
-    
+
+    /** 从标签构造 */
+    FSyOperationTarget(const FGameplayTag& InTargetTypeTag): TargetTypeTag(InTargetTypeTag) {}
 
     /** 从标签、参数构造 */
-    FSyOperationTarget(const FGameplayTag& InTargetTypeTag, const FSyInstancedStruct& InParameters, const FGuid& InTargetEntityId)
+    FSyOperationTarget(const FGameplayTag& InTargetTypeTag, const FSyInstancedStruct& InParameters)
         : TargetTypeTag(InTargetTypeTag), Parameters(InParameters) {}
 
     /** 目标类型标签 */
@@ -83,17 +85,10 @@ struct SYOPERATION_API FSyOperationModifier
     /** 默认构造函数 */
     FSyOperationModifier() = default;
 
-    /** 从修饰器标签构造 */
-    FSyOperationModifier(const FGameplayTag& InModifierTag) : ModifierTag(InModifierTag) {}
-
     /** 从修饰器标签和状态修改映射构造 */
-    FSyOperationModifier(const FGameplayTag& InModifierTag, const FSyStateParameterSet& InStateModifications)
-        : ModifierTag(InModifierTag), StateModifications(InStateModifications) {}
-
-    /** 修饰器类型标签 */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Modifier")
-    FGameplayTag ModifierTag;
-
+    FSyOperationModifier(const FSyStateParameterSet& InStateModifications)
+        : StateModifications(InStateModifications) {}
+    
     /** 状态修改映射：状态标签 -> 参数数组 */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Modifier")
     FSyStateParameterSet StateModifications;
