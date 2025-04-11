@@ -43,7 +43,7 @@ public:
      * @brief 实体状态的初始化数据。
      *        可以在蓝图编辑器中直接配置，或者在 Actor 构造时动态设置。
      */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SyState|Config", meta=(DisplayName="Default Initialization Data"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyState|Config", meta=(DisplayName="Default Initialization Data"))
     FSyStateParameterSet DefaultInitData;
 
     /**
@@ -72,10 +72,10 @@ public:
     /**
      * @brief 是否启用与全局 StateManager 的同步
      */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SyState|Config", meta=(DisplayName="Enable Global Sync"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyState|Config", meta=(DisplayName="Enable Global Sync"))
     bool bEnableGlobalSync = true;
 
-    // TODO: [拓展] 本地状态变更事件
+    // TODO: [拓展] 本地状态变更事件 
     /** 当本地状态数据实际发生变化时广播。
      *  注意：这与 StateManager 的记录事件不同，这个事件表示本地状态数据已被修改。
      *  参数可以设计为传递变化的具体 StateTag 和对应的 Metadata 对象，或者更简单的只通知"状态已变"。

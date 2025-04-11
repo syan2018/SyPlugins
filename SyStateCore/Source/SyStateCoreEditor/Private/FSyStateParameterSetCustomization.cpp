@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "FSyStateParameterSetCustomization.h"
+
+#include "DS_TagMetadata.h"
 #include "StateParameterTypes.h" // For FSyStateParameterSet, FSyStateParams
 #include "IDetailPropertyRow.h"
 #include "PropertyCustomizationHelpers.h"
@@ -8,6 +10,7 @@
 #include "IDetailChildrenBuilder.h"
 #include "IPropertyUtilities.h"
 #include "StateMetadataTypes.h"
+
 
 #define LOCTEXT_NAMESPACE "FSyStateParameterSetCustomization"
 
@@ -28,6 +31,7 @@ void FSyStateParameterSetCustomization::CustomizeHeader(TSharedRef<IPropertyHand
 void FSyStateParameterSetCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
     StructHandle = StructPropertyHandle;
+    PropertyUtilities = StructCustomizationUtils.GetPropertyUtilities();
 
     uint32 NumChildren;
     StructPropertyHandle->GetNumChildren(NumChildren);
@@ -85,116 +89,130 @@ void FSyStateParameterSetCustomization::CustomizeChildren(TSharedRef<IPropertyHa
 
 void FSyStateParameterSetCustomization::CustomizeMapElement(TSharedRef<IPropertyHandle> ElementHandle, TSharedRef<IPropertyHandle> KeyHandle, TSharedRef<IPropertyHandle> ValueHandle)
 {
-    // Store ValueHandle in the delegate's lambda capture
-    KeyHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FSyStateParameterSetCustomization::OnTagChanged, ValueHandle));
-
-    // Initial update in case the tag is already set
-    FString CurrentTagString;
-    if (KeyHandle->GetValueAsFormattedString(CurrentTagString) == FPropertyAccess::Success)
+    // 绑定标签变化委托
+    KeyHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([this, KeyHandle, ValueHandle]()
     {
-        FGameplayTag CurrentTag = FGameplayTag::RequestGameplayTag(FName(*CurrentTagString));
-        if (CurrentTag.IsValid())
+        // 尝试获取属性数据的指针
+        if (void* KeyData = nullptr; KeyHandle->GetValueData(KeyData) == FPropertyAccess::Success && KeyData)
         {
-            UpdateParameterStructForTag(CurrentTag, ValueHandle);
+            // 将指针转换为 FGameplayTag 类型
+            if (const FGameplayTag NewTag = *static_cast<FGameplayTag*>(KeyData); NewTag.IsValid())
+            {
+                CurrentTag = NewTag;
+                // 在修改属性值后调用 UpdateParameterStructForTag
+                UpdateParameterStructForTag(NewTag, ValueHandle);
+
+                // 可选：如果需要，手动通知属性系统值已更改，以触发UI刷新或其他依赖项
+                // KeyHandle->NotifyPropertyValueChanged(); 
+            }
+            else
+            {
+                 UE_LOG(LogTemp, Warning, TEXT("FSyStateParameterSetCustomization: Tag retrieved via GetValueData is invalid."));
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("FSyStateParameterSetCustomization: Failed to get value data for KeyHandle."));
+        }
+    }));
+
+    // 初始更新 (这里仍然可以使用 GetValueAsFormattedString，因为这不是在值变化的回调中)
+    FString InitialTagString;
+    if (KeyHandle->GetValueAsFormattedString(InitialTagString) == FPropertyAccess::Success)
+    {
+        FGameplayTag InitialTag = FGameplayTag::RequestGameplayTag(FName(*InitialTagString), false);
+        if (InitialTag.IsValid())
+        {
+            CurrentTag = InitialTag;
+            UpdateParameterStructForTag(InitialTag, ValueHandle);
+        }
+        else
+        {
+            // 如果初始字符串无法解析为有效Tag，也尝试用 GetValueData 获取一次
+            void* InitialKeyData = nullptr;
+            if (KeyHandle->GetValueData(InitialKeyData) == FPropertyAccess::Success && InitialKeyData)
+            {
+                InitialTag = *static_cast<FGameplayTag*>(InitialKeyData);
+                if (InitialTag.IsValid())
+                {
+                    CurrentTag = InitialTag;
+                    UpdateParameterStructForTag(InitialTag, ValueHandle);
+                }
+            }
         }
     }
 }
 
-void FSyStateParameterSetCustomization::OnTagChanged(TSharedRef<IPropertyHandle> ValueHandle)
+FInstancedStruct FSyStateParameterSetCustomization::CreateParameterStructFromMetadata(const USyStateMetadataBase* StateMetadata)
 {
-    // Find the corresponding key handle for this value handle
-    TSharedPtr<IPropertyHandle> ParentHandle = ValueHandle->GetParentHandle();
-    if (!ParentHandle.IsValid()) return;
-
-    TSharedPtr<IPropertyHandle> KeyHandle = ParentHandle->GetKeyHandle();
-    if (!KeyHandle.IsValid()) return;
-
-    // 获取标签值
-    FString TagString;
-    if (KeyHandle->GetValueAsFormattedString(TagString) == FPropertyAccess::Success)
+    FInstancedStruct NewInstance;
+    if (StateMetadata && StateMetadata->GetValueDataType())
     {
-        FGameplayTag NewTag = FGameplayTag::RequestGameplayTag(FName(*TagString));
-        if (NewTag.IsValid())
-        {
-            UpdateParameterStructForTag(NewTag, ValueHandle);
-        }
+        NewInstance.InitializeAs(StateMetadata->GetValueDataType());
+        // 这里可以添加从元数据初始化结构体的逻辑
+    }
+    return NewInstance;
+}
+
+void FSyStateParameterSetCustomization::SerializeParameterStruct(const FInstancedStruct& Instance, const TSharedRef<IPropertyHandle>& Handle)
+{
+    if (void* ElementData = nullptr; Handle->GetValueData(ElementData) == FPropertyAccess::Success)
+    {
+        *(static_cast<FInstancedStruct*>(ElementData)) = Instance;
+        Handle->NotifyPostChange(EPropertyChangeType::ValueSet);
     }
 }
 
-void FSyStateParameterSetCustomization::UpdateParameterStructForTag(const FGameplayTag& Tag, TSharedRef<IPropertyHandle> ParamsPropertyHandle)
+void FSyStateParameterSetCustomization::UpdateParameterStructForTag(const FGameplayTag& Tag, const TSharedRef<IPropertyHandle>& ParamsPropertyHandle)
 {
-    UScriptStruct* TargetStructType = nullptr;
+    // 获取参数数组句柄
+    TSharedPtr<IPropertyHandle> ArrayHandle = ParamsPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FSyStateParams, Params));
+    if (!ArrayHandle.IsValid() || !ArrayHandle->IsValidHandle())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("FSyStateParameterSetCustomization: Could not get 'Params' array handle."));
+        return;
+    }
+
+    TSharedRef<IPropertyHandleArray> ArrayHandleRef = ArrayHandle->AsArray().ToSharedRef();
+    ArrayHandleRef->EmptyArray();
 
     if (Tag.IsValid())
     {
         // 获取所有与标签关联的元数据
         TArray<UO_TagMetadata*> AllMetadata = UDS_TagMetadata::GetTagMetadata(Tag);
-        
-        // 遍历所有元数据，找到第一个 USyStateMetadataBase 类型的元数据
+        TArray<USyStateMetadataBase*> StateMetadataList;
+
+        // 收集所有状态元数据
         for (UO_TagMetadata* Metadata : AllMetadata)
         {
             if (USyStateMetadataBase* StateMetadata = Cast<USyStateMetadataBase>(Metadata))
             {
-                TargetStructType = StateMetadata->GetValueDataType();
-                break;
+                StateMetadataList.Add(StateMetadata);
             }
         }
-    }
-    
-    // 3. Access the TArray<FSyInstancedStruct> property handle
-    TSharedPtr<IPropertyHandle> ArrayHandle = ParamsPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FSyStateParams, Params));
-    if (!ArrayHandle.IsValid() || !ArrayHandle->IsValidHandle())
-    {
-         UE_LOG(LogTemp, Warning, TEXT("FSyStateParameterSetCustomization: Could not get 'Params' array handle."));
-        return;
-    }
 
-    TSharedRef<IPropertyHandleArray> ArrayHandleRef = ArrayHandle->AsArray().ToSharedRef();
-
-    // 4. Clear the array first
-    ArrayHandleRef->EmptyArray();
-
-    if (TargetStructType)
-    {
-        // 5. Add one new element
-        ArrayHandleRef->AddItem();
-        uint32 NumElements;
-        ArrayHandleRef->GetNumElements(NumElements);
-        if (NumElements > 0)
+        // 为每个元数据创建对应的参数
+        for (USyStateMetadataBase* StateMetadata : StateMetadataList)
         {
-             // 6. Get the handle for the new FSyInstancedStruct element
-            TSharedPtr<IPropertyHandle> NewElementHandle = ArrayHandleRef->GetElement(NumElements - 1);
-            if (NewElementHandle.IsValid() && NewElementHandle->IsValidHandle())
+            if (StateMetadata && StateMetadata->GetValueDataType())
             {
-                // 7. Set its underlying struct type
-                UE_LOG(LogTemp, Log, TEXT("FSyStateParameterSetCustomization: Intending to set struct type for tag '%s' to '%s'"), *Tag.ToString(), *TargetStructType->GetName());
-
-                // 创建新的实例化结构体
-                FInstancedStruct NewInstance;
-                NewInstance.InitializeAs(TargetStructType);
-
-                // 获取原始数据指针
-                void* ElementData = nullptr;
-                if (NewElementHandle->GetValueData(ElementData) == FPropertyAccess::Success)
+                // 添加新元素
+                ArrayHandleRef->AddItem();
+                uint32 NumElements;
+                ArrayHandleRef->GetNumElements(NumElements);
+                
+                if (NumElements > 0)
                 {
-                     if(ElementData)
-                     {
-                          *(static_cast<FInstancedStruct*>(ElementData)) = NewInstance;
-                          // 使用 NotifyPostChange 替代 NotifyValueChanged
-                          NewElementHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
-                     }
-                } 
-                else {
-                      UE_LOG(LogTemp, Warning, TEXT("FSyStateParameterSetCustomization: Failed to get value data for new array element."));
+                    TSharedPtr<IPropertyHandle> NewElementHandle = ArrayHandleRef->GetElement(NumElements - 1);
+                    if (NewElementHandle.IsValid())
+                    {
+                        // 创建并设置新的实例化结构体
+                        FInstancedStruct NewInstance = CreateParameterStructFromMetadata(StateMetadata);
+                        SerializeParameterStruct(NewInstance, NewElementHandle.ToSharedRef());
+                    }
                 }
             }
-             else {
-                 UE_LOG(LogTemp, Warning, TEXT("FSyStateParameterSetCustomization: Failed to get handle for new array element."));
-             }
         }
-         else {
-             UE_LOG(LogTemp, Warning, TEXT("FSyStateParameterSetCustomization: Array size is not > 0 after AddItem."));
-         }
     }
 }
 
