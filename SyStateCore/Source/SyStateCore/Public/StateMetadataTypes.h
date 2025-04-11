@@ -102,39 +102,3 @@ protected:
     bool ValidateAndProcessParams(const FInstancedStruct& Params, const TCHAR* OperationName);
 };
 
-/**
- * USyTagStateMetadata - 标签状态元数据
- * 
- * 用于存储GameplayTag类型的状态值
- */
-UCLASS(Blueprintable)
-class SYSTATECORE_API USyTagStateMetadata : public USyStateMetadataBase
-{
-    GENERATED_BODY()
-
-public:
-    /** 构造函数 */
-    USyTagStateMetadata();
-
-    /** 返回此元数据管理的具体数据类型 (FGameplayTag) */
-    virtual UScriptStruct* GetValueDataType_Implementation() const override;
-
-    /** 获取存储的值 */
-    virtual FInstancedStruct GetValueStruct_Implementation() const override;
-
-    /** 设置存储的值 */
-    virtual void SetValueStruct_Implementation(const FInstancedStruct& InValue) override;
-
-    /** 获取标签值 */
-    UFUNCTION(BlueprintPure, Category = "SyStateCore|TagStateMetadata")
-    FGameplayTag GetValue() const { return Value; }
-
-    /** 设置标签值 */
-    UFUNCTION(BlueprintCallable, Category = "SyStateCore|TagStateMetadata")
-    void SetValue(const FGameplayTag& InValue) { Value = InValue; }
-
-protected:
-    /** 标签值 */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyStateCore|TagStateMetadata")
-    FGameplayTag Value;
-};

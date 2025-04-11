@@ -52,34 +52,3 @@ bool USyStateMetadataBase::ValidateAndProcessParams(const FInstancedStruct& Para
     SetValueStruct(Params);
     return true;
 }
-
-USyTagStateMetadata::USyTagStateMetadata()
-{
-}
-
-UScriptStruct* USyTagStateMetadata::GetValueDataType_Implementation() const
-{
-    return FGameplayTag::StaticStruct();
-}
-
-FInstancedStruct USyTagStateMetadata::GetValueStruct_Implementation() const
-{
-    FInstancedStruct Result;
-    Result.InitializeAs<FGameplayTag>(Value);
-    return Result;
-}
-
-void USyTagStateMetadata::SetValueStruct_Implementation(const FInstancedStruct& InValue)
-{
-    if (InValue.IsValid() && InValue.GetScriptStruct() == FGameplayTag::StaticStruct())
-    {
-        if (const FGameplayTag* TagValue = InValue.GetPtr<FGameplayTag>())
-        {
-            Value = *TagValue;
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("SetValueStruct failed: Type mismatch for %s"), *GetNameSafe(this));
-    }
-}
