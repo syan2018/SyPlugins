@@ -144,5 +144,5 @@ struct SYSTATECORE_API FSyStateCategories
     void ApplyInitData(const FSyStateParameterSet& InitData);
 
     /** 批量应用状态修改 */
-    void ApplyStateModifications(const TMap<FGameplayTag, FSyStateParams>& StateModifications);
+    void ApplyStateModifications(const TMap<FGameplayTag, TArray<FSyInstancedStruct>>& StateModifications);
 }; 

@@ -162,7 +162,7 @@ void USyStateComponent::ApplyAggregatedModifications()
     // 调用 FSyStateCategories 的方法来应用修改
     // 注意：这里需要将 FSyStateParameterSet 的内容转换为 ApplyStateModifications 需要的 TMap<FGameplayTag, FSyStateParams>
     // 如果 ApplyStateModifications 的实现是智能合并/覆盖，则此方法有效。
-    CurrentStateCategories.ApplyStateModifications(AggregatedMods.Parameters); 
+    CurrentStateCategories.ApplyStateModifications(AggregatedMods.GetParametersAsMap()); 
     
     UE_LOG(LogSyStateComponent, Verbose, TEXT("%s: Applied aggregated modifications for TargetTag %s."), *GetNameSafe(GetOwner()), *TargetTypeTag.ToString());
 

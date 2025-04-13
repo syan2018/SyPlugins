@@ -114,7 +114,7 @@ struct SYOPERATION_API FSyOperationModifier
     /** 清除特定状态标签的修改 */
     void ClearStateModificationsForTag(const FGameplayTag& StateTag)
     {
-        StateModifications.ClearStateParams(StateTag);
+        StateModifications.RemoveStateParams(StateTag);
     }
 };
 

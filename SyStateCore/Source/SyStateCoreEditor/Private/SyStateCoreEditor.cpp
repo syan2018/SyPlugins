@@ -5,7 +5,7 @@
 #include "Modules/ModuleManager.h"
 #include "StateParameterTypes.h" // Need FSyStateParameterSet
 // Include the customization class header
-#include "FSyStateParameterSetCustomization.h"
+#include "FSyStateParamsCustomization.h"
 
 #define LOCTEXT_NAMESPACE "FSyStateCoreEditorModule"
 
@@ -16,8 +16,8 @@ void FSyStateCoreEditorModule::StartupModule()
 
 	// Register the customization for FSyStateParameterSet
 	PropertyModule.RegisterCustomPropertyTypeLayout(
-		FSyStateParameterSet::StaticStruct()->GetFName(), 
-		FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FSyStateParameterSetCustomization::MakeInstance)
+		FSyStateParams::StaticStruct()->GetFName(),
+		FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FSyStateParamsCustomization::MakeInstance)
 	);
 
 	PropertyModule.NotifyCustomizationModuleChanged();
@@ -29,8 +29,7 @@ void FSyStateCoreEditorModule::ShutdownModule()
 	if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
 	{
 		FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-		
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FSyStateParameterSet::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FSyStateParams::StaticStruct()->GetFName());
 	}
 }
 

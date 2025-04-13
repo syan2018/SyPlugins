@@ -53,7 +53,7 @@ FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const 
 {
     FSyStateParameterSet AggregatedResult;
     // 使用一个临时的Map来聚合参数，处理覆盖逻辑
-    TMap<FGameplayTag, FSyStateParams> AggregatedParamsMap;
+    TMap<FGameplayTag, TArray<FSyInstancedStruct>> AggregatedParamsMap;
 
     // TODO: [拓展] 性能考量: 如果 ModificationLog 非常大，此线性扫描可能成为瓶颈。
     for (const FSyStateModificationRecord& Record : ModificationLog)
@@ -72,24 +72,24 @@ FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const 
         // --- 聚合阶段 ---
         // 将当前记录的 Modifier 参数合并到临时 Map 中
         // 后出现的记录会覆盖或合并先出现的记录中相同 StateTag 的条目
-        for (const auto& Pair : Record.Operation.Modifier.StateModifications.GetStateParamsMap())
+        for (const auto& Pair : Record.Operation.Modifier.StateModifications.GetParametersAsMap())
         {
             const FGameplayTag& StateTag = Pair.Key;
-            const FSyStateParams& ParamsToMerge = Pair.Value;
+            const TArray<FSyInstancedStruct>& ParamsToMerge = Pair.Value;
 
             // 查找临时 Map 中是否已有该 StateTag 的条目
-            FSyStateParams& ExistingParams = AggregatedParamsMap.FindOrAdd(StateTag);
+            TArray<FSyInstancedStruct>& ExistingParams = AggregatedParamsMap.FindOrAdd(StateTag);
             
             // 合并参数：这里简单地追加。如果需要覆盖或更复杂的逻辑，在此修改。
             // 或者，如果 FSyStateParams 提供了合并方法，则调用该方法。
             // 注意：直接覆盖可能更符合"后操作覆盖前操作"的语义
             // ExistingParams = ParamsToMerge; // 直接覆盖
-            ExistingParams.AddParams(ParamsToMerge.Params); // 追加
+            ExistingParams.Append(ParamsToMerge); // 追加
         }
     }
-
+    
     // 将聚合后的 Map 赋值给结果结构体
-    AggregatedResult.Parameters = AggregatedParamsMap;
+    AggregatedResult = AggregatedParamsMap;
 
     return AggregatedResult;
 }

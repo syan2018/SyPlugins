@@ -10,16 +10,16 @@
 void FSyStateCategories::ApplyInitData(const FSyStateParameterSet& InitData)
 {
     // 遍历所有初始化数据
-    for (const auto& StatePair : InitData.Parameters) // Use Parameters from FSyStateParameterSet
+    for (const auto& Params : InitData.Parameters) // Use Parameters from FSyStateParameterSet
     {
-        const FGameplayTag& StateTag = StatePair.Key;
-        const FSyStateParams& StateParams = StatePair.Value;
+        const FGameplayTag& StateTag = Params.Tag;
+        const TArray<FSyInstancedStruct>& StateParams = Params.Params;
 
         // 获取或创建该状态标签的元数据数组
         FSyStateMetadatas& MetadataArray = StateData.FindOrAdd(StateTag);
 
         // 应用每个初始化参数
-        for (const FSyInstancedStruct& InitParam : StateParams.Params)
+        for (const FSyInstancedStruct& InitParam : StateParams)
         {
             // 从TagMetadata系统获取元数据实例列表
             // TODO: Review this logic. Should probably create new instances based on InitParam type?
@@ -42,19 +42,19 @@ void FSyStateCategories::ApplyInitData(const FSyStateParameterSet& InitData)
 }
 
 // Implementation for FSyStateCategories::ApplyStateModifications
-void FSyStateCategories::ApplyStateModifications(const TMap<FGameplayTag, FSyStateParams>& StateModifications)
+void FSyStateCategories::ApplyStateModifications(const TMap<FGameplayTag, TArray<FSyInstancedStruct>>& StateModifications)
 {
     // 遍历所有状态修改
     for (const auto& StatePair : StateModifications)
     {
         const FGameplayTag& StateTag = StatePair.Key;
-        const FSyStateParams& StateParams = StatePair.Value;
+        const TArray<FSyInstancedStruct>& StateParams = StatePair.Value;
 
         // 获取该状态标签的元数据数组
         if (FSyStateMetadatas* MetadataArray = StateData.Find(StateTag))
         {
             // 应用每个修改参数到所有匹配的元数据对象
-            for (const FSyInstancedStruct& ModParam : StateParams.Params)
+            for (const FSyInstancedStruct& ModParam : StateParams)
             {
                 // 从TagMetadata系统获取元数据实例列表
                 // TODO: Review this logic. Should apply ModParam only to relevant metadata instances within MetadataArray.
