@@ -45,6 +45,7 @@ public class SyStateCoreEditor : ModuleRules
                 "GameplayTagsEditor", // Potentially needed for Tag Editor integration
                 "TagMetadata", // Needed for TagMetadata plugin access (UDS_TagMetadata)
                 "SyStateCore", // Dependency on the Runtime module
+                "SyCore", // Needed for FSyInstancedStruct
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

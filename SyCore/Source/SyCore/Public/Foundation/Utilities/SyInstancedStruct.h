@@ -6,6 +6,12 @@
 #include "StructUtils/InstancedStruct.h"
 #include "SyInstancedStruct.generated.h"
 
+USTRUCT(BlueprintType)
+struct SYCORE_API FSyBaseInstancedStruct
+{
+    GENERATED_BODY()
+};
+
 /**
  * FSyInstancedStruct - 扩展自FInstancedStruct的工具类
  * 

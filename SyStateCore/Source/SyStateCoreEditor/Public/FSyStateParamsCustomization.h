@@ -6,6 +6,7 @@
 #include "IPropertyTypeCustomization.h"
 #include "PropertyHandle.h"
 #include "GameplayTagContainer.h" // For FGameplayTag
+#include "Containers/Ticker.h" // Needed for FTSTicker
 // Forward declarations to avoid including heavy headers if possible
 struct FInstancedStruct;
 struct FSyStateParams;
@@ -22,23 +23,26 @@ class IPropertyHandleArray;
  * Handles updating the 'Params' array based on the selected 'Tag'.
  * Also provides feedback if a duplicate tag is detected within the parent array.
  */
-class FSyStateParamsCustomization : public IPropertyTypeCustomization
+class SYSTATECOREEDITOR_API FSyStateParamsCustomization : public IPropertyTypeCustomization
 {
 public:
     static TSharedRef<IPropertyTypeCustomization> MakeInstance();
+    virtual ~FSyStateParamsCustomization(); // Add destructor for cleanup
 
     /** IPropertyTypeCustomization interface */
     virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
     virtual void CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
 
 private:
-    /** Callback when the 'Tag' property value changes. */
+    /** Callback when the 'Tag' property value changes. Schedules a deferred update. */
     void OnTagChanged();
-    /** Callback executed after the 'Tag' property has potentially changed (post-change). */
-    void OnTagChanged_Post();
+    /** Schedules a deferred update of the Params array for the given tag. */
+    void RequestDeferredUpdate(const FGameplayTag& NewTag);
+    /** Function called by the ticker to perform the deferred update. */
+    bool DeferredUpdateParams(float DeltaTime);
 
-    /** Updates the 'Params' TArray based on the provided GameplayTag. */
-    void UpdateParamsForTag(const FGameplayTag& Tag);
+    /** Updates the 'Params' TArray based on the provided GameplayTag. (Internal logic) */
+    void UpdateParamsForTag_Internal(const FGameplayTag& Tag);
 
     /** Gets the property handle for the 'Tag' member of the struct. */
     TSharedPtr<IPropertyHandle> GetTagPropertyHandle() const;
@@ -74,6 +78,11 @@ private:
     TSharedPtr<STextBlock> WarningTextBlock;
     /** Holds the currently detected duplicate tag for warning display. */
     FGameplayTag CurrentDuplicateTag;
-    /** Flag to defer updates if needed, e.g., waiting for PostChange. */
-    bool bNeedsUpdate_Deferred = false; 
+
+    /** Ticker handle for deferred update */
+    FTSTicker::FDelegateHandle DeferredUpdateTickerHandle;
+    /** Tag value captured for deferred update */
+    FGameplayTag TagForDeferredUpdate;
+    /** The tag value for which the Params array was last successfully updated or cleared. */
+    FGameplayTag LastProcessedTag = FGameplayTag::EmptyTag; // Initialize properly
 }; 

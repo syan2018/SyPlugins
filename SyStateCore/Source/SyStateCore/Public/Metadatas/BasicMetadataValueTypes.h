@@ -6,12 +6,13 @@
 #include "Math/Vector.h"
 #include "Math/Rotator.h"
 #include "Math/Transform.h"
+#include "Foundation/Utilities/SyInstancedStruct.h"
 #include "BasicMetadataValueTypes.generated.h"
 
 // --- USTRUCT Wrappers for Basic Types ---
 
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyBoolValue
+struct SYSTATECORE_API FSyBoolValue: public FSyBaseInstancedStruct
 {
     GENERATED_BODY()
 
@@ -23,7 +24,7 @@ struct SYSTATECORE_API FSyBoolValue
 };
 
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyIntValue
+struct SYSTATECORE_API FSyIntValue: public FSyBaseInstancedStruct
 {
     GENERATED_BODY()
 
@@ -35,7 +36,7 @@ struct SYSTATECORE_API FSyIntValue
 };
 
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyFloatValue
+struct SYSTATECORE_API FSyFloatValue: public FSyBaseInstancedStruct
 {
     GENERATED_BODY()
 
@@ -47,7 +48,7 @@ struct SYSTATECORE_API FSyFloatValue
 };
 
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyStringValue
+struct SYSTATECORE_API FSyStringValue: public FSyBaseInstancedStruct
 {
     GENERATED_BODY()
 
@@ -59,7 +60,7 @@ struct SYSTATECORE_API FSyStringValue
 };
 
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyNameValue
+struct SYSTATECORE_API FSyNameValue: public FSyBaseInstancedStruct
 {
     GENERATED_BODY()
 
@@ -71,7 +72,7 @@ struct SYSTATECORE_API FSyNameValue
 };
 
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyVectorValue
+struct SYSTATECORE_API FSyVectorValue: public FSyBaseInstancedStruct
 {
     GENERATED_BODY()
 
@@ -83,7 +84,7 @@ struct SYSTATECORE_API FSyVectorValue
 };
 
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyRotatorValue
+struct SYSTATECORE_API FSyRotatorValue: public FSyBaseInstancedStruct
 {
     GENERATED_BODY()
 
@@ -95,7 +96,7 @@ struct SYSTATECORE_API FSyRotatorValue
 };
 
 USTRUCT(BlueprintType)
-struct SYSTATECORE_API FSyTransformValue
+struct SYSTATECORE_API FSyTransformValue: public FSyBaseInstancedStruct
 {
     GENERATED_BODY()
 

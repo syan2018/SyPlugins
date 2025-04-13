@@ -5,11 +5,13 @@
 #include "IDetailChildrenBuilder.h"
 #include "IDetailPropertyRow.h"
 #include "PropertyHandle.h"
+#include "StructUtils/InstancedStruct.h"
 #include "IPropertyUtilities.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Images/SImage.h"
 #include "Styling/AppStyle.h"
 #include "ScopedTransaction.h" // For Undo/Redo
+#include "Containers/Ticker.h" // Make sure Ticker is included
 
 // Include necessary headers for types used
 #include "DetailWidgetRow.h"
@@ -25,16 +27,21 @@ TSharedRef<IPropertyTypeCustomization> FSyStateParamsCustomization::MakeInstance
     return MakeShareable(new FSyStateParamsCustomization());
 }
 
+FSyStateParamsCustomization::~FSyStateParamsCustomization()
+{
+    if (DeferredUpdateTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(DeferredUpdateTickerHandle);
+        DeferredUpdateTickerHandle.Reset();
+    }
+}
+
 void FSyStateParamsCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
 {
-    // Use default header rendering provided by the parent structure (likely TArray)
-    // We will customize children instead.
     HeaderRow.NameContent()
 	[
 		StructPropertyHandle->CreatePropertyNameWidget()
 	];
-    // Optionally hide the header if the array element title is sufficient
-	// HeaderRow.Visibility(EVisibility::Collapsed);
 }
 
 void FSyStateParamsCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils)
@@ -42,112 +49,88 @@ void FSyStateParamsCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> 
     StructHandle = StructPropertyHandle;
     PropertyUtilities = StructCustomizationUtils.GetPropertyUtilities();
 
-    // Get handles for Tag and Params members
     TagHandle = GetTagPropertyHandle();
     ParamsHandle = GetParamsPropertyHandle();
 
-    if (!TagHandle.IsValid() || !TagHandle->IsValidHandle())
+    if (!TagHandle.IsValid() || !TagHandle->IsValidHandle() || !ParamsHandle.IsValid() || !ParamsHandle->IsValidHandle())
     {
-        UE_LOG(LogTemp, Error, TEXT("FSyStateParamsCustomization: Could not find 'Tag' property handle."));
-        return;
-    }
-    if (!ParamsHandle.IsValid() || !ParamsHandle->IsValidHandle())
-    { 
-        UE_LOG(LogTemp, Error, TEXT("FSyStateParamsCustomization: Could not find 'Params' property handle."));
+        UE_LOG(LogTemp, Error, TEXT("FSyStateParamsCustomization: Could not find required property handles (Tag or Params)."));
         return;
     }
 
-    // Add the 'Tag' property row
-    IDetailPropertyRow& TagRow = ChildBuilder.AddProperty(TagHandle.ToSharedRef());
-    // Bind delegates to the Tag property changes
-    // Using PostChange might be more reliable for getting the final value
-    TagHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FSyStateParamsCustomization::OnTagChanged));
-    // TagHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FSyStateParamsCustomization::OnTagChanged)); // Alternative if nested changes need watching
-    // TagHandle->SetOnPropertyValueChangedWithData( TDelegate<void(const FPropertyChangedEvent&)>::CreateSP(this, &FSyStateParamsCustomization::OnTagChanged_Post) ); // More complex, provides change event data
+    // Add the 'Tag' property row using default widgets
+    ChildBuilder.AddProperty(TagHandle.ToSharedRef())
+        .ShouldAutoExpand(true);
+        
+    // 不再需要绑定 OnTagChanged，因为 PostSerialize 会处理 Tag 变更
 
-    // Add a row for the duplicate tag warning message below the Tag property
+    // Add warning row
     ChildBuilder.AddCustomRow(LOCTEXT("DuplicateTagWarningLabel", "DuplicateWarning"))
-    .Visibility(EVisibility::Collapsed) // Initially hidden
-    .NameContent()
+    .Visibility(EVisibility::Collapsed)
+    .WholeRowContent()
     [
-        SNew(SImage)
-        .Image(FAppStyle::Get().GetBrush("Icons.WarningWithColor"))
-        .ToolTipText(LOCTEXT("DuplicateTagWarningTooltip", "This tag is already used by another element in the array."))
-    ]
-    .ValueContent()
-    [
-        SAssignNew(WarningTextBlock, STextBlock)
-        .Font(IDetailLayoutBuilder::GetDetailFontBold())
-        .ColorAndOpacity(FAppStyle::Get().GetSlateColor("Colors.Warning"))
-        // .Text(LOCTEXT("DuplicateTagWarningText", "Duplicate Tag!")) // Text set dynamically
+        SNew(SHorizontalBox)
+        +SHorizontalBox::Slot()
+        .AutoWidth()
+        .Padding(2.0f, 0.0f)
+        .VAlign(VAlign_Center)
+        [
+            SNew(SImage)
+            .Image(FAppStyle::Get().GetBrush("Icons.WarningWithColor"))
+            .ToolTipText(LOCTEXT("DuplicateTagWarningTooltip", "This tag is already used by another element in the array."))
+        ]
+        +SHorizontalBox::Slot()
+        .FillWidth(1.0f)
+        .VAlign(VAlign_Center)
+        [
+            SAssignNew(WarningTextBlock, STextBlock)
+            .Font(IDetailLayoutBuilder::GetDetailFontBold())
+            .ColorAndOpacity(FAppStyle::Get().GetSlateColor("Colors.Warning"))
+        ]
     ];
 
-    // Add the 'Params' property row (TArray)
-    // Use default array handling for now
+    // 添加 Params 数组标题
+    ChildBuilder.AddCustomRow(LOCTEXT("ParamsArrayLabel", "Parameters"))
+    .NameContent()
+    [
+        SNew(STextBlock)
+        .Text(LOCTEXT("ParamsArrayLabel", "Parameters"))
+        .Font(IDetailLayoutBuilder::GetDetailFont())
+    ];
+
+    // 添加参数数组
     IDetailPropertyRow& ParamsRow = ChildBuilder.AddProperty(ParamsHandle.ToSharedRef());
+    ParamsRow
+        .ShowPropertyButtons(true)
+        .ShouldAutoExpand(true);
 
-    // Initial check for duplicates and update Params based on initial Tag value
-    OnTagChanged_Post(); // Call post-change logic initially
-}
-
-void FSyStateParamsCustomization::OnTagChanged()
-{
-    // This might be called before the value is fully committed. 
-    // We set a flag and defer the actual logic to OnTagChanged_Post, 
-    // which we can potentially trigger via a timer or another mechanism if PostChange delegate isn't reliable.
-    // For now, let's assume a direct call to Post logic might work for struct members.
-    OnTagChanged_Post();
-
-    // Request a refresh of the details panel to potentially show/hide the warning immediately
-    if(PropertyUtilities.IsValid())
+    // 自定义每个参数的显示
+    uint32 NumParams = 0;
+    if (ParamsHandle->AsArray()->GetNumElements(NumParams) == FPropertyAccess::Success)
     {
-        PropertyUtilities->RequestRefresh();
-    }
-}
-
-void FSyStateParamsCustomization::OnTagChanged_Post()
-{
-    if (!TagHandle.IsValid())
-    {
-        return;
-    }
-
-    FGameplayTag CurrentTag;
-    void* TagData = nullptr;
-    FPropertyAccess::Result Result = TagHandle->GetValueData(TagData);
-
-    if (Result == FPropertyAccess::Success && TagData)
-    {        
-        CurrentTag = *static_cast<FGameplayTag*>(TagData);
-        
-        if(CurrentTag.IsValid())
+        for (uint32 ParamIndex = 0; ParamIndex < NumParams; ++ParamIndex)
         {
-            int32 DuplicateIndex = INDEX_NONE;
-            if (IsTagDuplicate(CurrentTag, DuplicateIndex))
+            TSharedRef<IPropertyHandle> ParamHandle = ParamsHandle->AsArray()->GetElement(ParamIndex);
+            
+            // 获取参数类型信息
+            void* ParamData = nullptr;
+            if (ParamHandle->GetValueData(ParamData) == FPropertyAccess::Success && ParamData)
             {
-                ShowDuplicateTagWarning(CurrentTag, DuplicateIndex);
-                // Policy: Still update Params even if duplicate for now
-                UpdateParamsForTag(CurrentTag);
-            }
-            else
-            {            
-                HideDuplicateTagWarning();
-                UpdateParamsForTag(CurrentTag);
+                FSyInstancedStruct* InstancedStruct = static_cast<FSyInstancedStruct*>(ParamData);
+                if (InstancedStruct && InstancedStruct->GetScriptStruct())
+                {
+                    FString ParamTypeName = InstancedStruct->GetScriptStruct()->GetName();
+                    
+                    // 添加自定义行显示参数
+                    IDetailPropertyRow& ElementRow = ChildBuilder.AddProperty(ParamHandle);
+                    ElementRow
+                        .DisplayName(FText::FromString(FString::Printf(TEXT("Parameter %d (%s)"), ParamIndex, *ParamTypeName)))
+                        .ShowPropertyButtons(true)
+                        .EditCondition(true, nullptr)
+                        .ShouldAutoExpand(true);
+                }
             }
         }
-        else
-        {
-            UE_LOG(LogTemp, Log, TEXT("FSyStateParamsCustomization::OnTagChanged_Post: Tag value read is None or invalid."));
-            HideDuplicateTagWarning();
-            UpdateParamsForTag(CurrentTag);
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("FSyStateParamsCustomization::OnTagChanged_Post: Failed to get Tag value data (Result: %d)."), static_cast<int32>(Result));
-        HideDuplicateTagWarning();
-        // Optionally clear Params if Tag is invalid or unreadable?
-        // UpdateParamsForTag(FGameplayTag()); // Pass invalid tag to clear
     }
 }
 
@@ -163,33 +146,56 @@ TSharedPtr<IPropertyHandle> FSyStateParamsCustomization::GetParamsPropertyHandle
 
 TSharedPtr<IPropertyHandleArray> FSyStateParamsCustomization::GetParentArrayHandle() const
 {
-    if (StructHandle.IsValid())
-    {
-        TSharedPtr<IPropertyHandle> ParentHandle = StructHandle->GetParentHandle();
-        if (ParentHandle.IsValid() && ParentHandle->AsArray().IsValid())
+    if (!StructHandle.IsValid())
+    {        
+        return nullptr; // Error logged elsewhere or implicitly handled
+    }
+    TSharedPtr<IPropertyHandle> ParentHandle = StructHandle->GetParentHandle();
+    if (!ParentHandle.IsValid())
+    {        
+        return nullptr; // Error logged elsewhere or implicitly handled
+    }
+    if (!ParentHandle->AsArray().IsValid())
+    {        
+        TSharedPtr<IPropertyHandle> GrandParentHandle = ParentHandle->GetParentHandle();
+        if(GrandParentHandle.IsValid() && GrandParentHandle->AsArray().IsValid())
         {
-            return ParentHandle->AsArray();
+            return GrandParentHandle->AsArray();
         }
     }
-    return nullptr;
+    
+    return ParentHandle->AsArray();
 }
 
 bool FSyStateParamsCustomization::IsTagDuplicate(const FGameplayTag& TagToCheck, int32& OutDuplicateIndex) const
 {
     OutDuplicateIndex = INDEX_NONE;
-    if (!TagToCheck.IsValid()) return false; // Invalid tags cannot be duplicates in this context
+    if (!TagToCheck.IsValid()) return false; 
 
     TSharedPtr<IPropertyHandleArray> ParentArrayHandle = GetParentArrayHandle();
-    if (!ParentArrayHandle.IsValid()) return false;
+    if (!ParentArrayHandle.IsValid()) 
+    {        
+        // Error already logged in GetParentArrayHandle
+        return false;
+    }
 
     uint32 NumParentElements = 0;
-    ParentArrayHandle->GetNumElements(NumParentElements);
+    if(ParentArrayHandle->GetNumElements(NumParentElements) != FPropertyAccess::Success)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("FSyStateParamsCustomization::IsTagDuplicate: Failed to get number of elements from parent array."));
+        return false;
+    }
 
-    int32 MyIndex = StructHandle->GetIndexInArray();
+    int32 MyIndex = StructHandle->GetIndexInArray(); 
+    if (MyIndex == INDEX_NONE)
+    {
+        UE_LOG(LogTemp, Error, TEXT("FSyStateParamsCustomization::IsTagDuplicate: Could not get current struct index in parent array."));
+        return false; 
+    }
 
     for (uint32 i = 0; i < NumParentElements; ++i)
     {
-        if (static_cast<int32>(i) == MyIndex) continue; // Don't compare with self
+        if (static_cast<int32>(i) == MyIndex) continue; 
 
         TSharedPtr<IPropertyHandle> SiblingStructHandle = ParentArrayHandle->GetElement(i);
         if (SiblingStructHandle.IsValid())
@@ -202,7 +208,7 @@ bool FSyStateParamsCustomization::IsTagDuplicate(const FGameplayTag& TagToCheck,
                 if (SiblingTagHandle->GetValueData(SiblingTagData) == FPropertyAccess::Success && SiblingTagData)
                 {
                     SiblingTag = *static_cast<FGameplayTag*>(SiblingTagData);
-                    if (SiblingTag == TagToCheck)
+                    if (SiblingTag.IsValid() && SiblingTag == TagToCheck) 
                     {
                         OutDuplicateIndex = i;
                         return true;
@@ -222,7 +228,7 @@ void FSyStateParamsCustomization::ShowDuplicateTagWarning(const FGameplayTag& Du
         FString WarningMsg = FString::Printf(TEXT("Duplicate Tag! Already used by element %d."), DuplicateIndex);
         WarningTextBlock->SetText(FText::FromString(WarningMsg));
         WarningTextBlock->SetVisibility(EVisibility::Visible);
-        CurrentDuplicateTag = DuplicateTag; // Store for potential later checks
+        CurrentDuplicateTag = DuplicateTag; 
     }
 }
 
@@ -231,12 +237,9 @@ void FSyStateParamsCustomization::HideDuplicateTagWarning()
     if (WarningTextBlock.IsValid())
     {
         WarningTextBlock->SetVisibility(EVisibility::Collapsed);
-        CurrentDuplicateTag = FGameplayTag(); // Clear stored duplicate
+        CurrentDuplicateTag = FGameplayTag(); 
     }
 }
-
-
-// --- Helper Function Implementations (from previous customization, adjusted) ---
 
 void FSyStateParamsCustomization::SerializeParameterStruct(const FInstancedStruct& Instance, const TSharedRef<IPropertyHandle>& Handle)
 {
@@ -244,7 +247,6 @@ void FSyStateParamsCustomization::SerializeParameterStruct(const FInstancedStruc
     if (Handle->GetValueData(ElementData) == FPropertyAccess::Success && ElementData)
     {        
         *(static_cast<FInstancedStruct*>(ElementData)) = Instance;
-        // Notify change on the specific element handle
         Handle->NotifyFinishedChangingProperties();
     }
     else
@@ -259,25 +261,29 @@ FInstancedStruct FSyStateParamsCustomization::CreateParameterStructFromMetadata(
     if (StateMetadata && StateMetadata->GetValueDataType())
     {
         NewInstance.InitializeAs(StateMetadata->GetValueDataType());
-        // TODO: Optionally initialize default values from metadata if needed
     }
     return NewInstance;
 }
 
-void FSyStateParamsCustomization::UpdateParamsForTag(const FGameplayTag& Tag)
+void FSyStateParamsCustomization::UpdateParamsForTag_Internal(const FGameplayTag& Tag)
 {
     if (!ParamsHandle.IsValid() || !ParamsHandle->AsArray().IsValid())
     {
-        UE_LOG(LogTemp, Error, TEXT("FSyStateParamsCustomization::UpdateParamsForTag: Invalid Params array handle."));
+        UE_LOG(LogTemp, Error, TEXT("FSyStateParamsCustomization::UpdateParamsForTag_Internal: Invalid Params array handle."));
+        return;
+    }
+    
+    if(StructHandle.IsValid() && StructHandle->IsEditConst())
+    {
+        UE_LOG(LogTemp, Verbose, TEXT("FSyStateParamsCustomization::UpdateParamsForTag_Internal: Parent struct is read-only, cannot modify Params."));
         return;
     }
 
     TSharedRef<IPropertyHandleArray> ArrayHandleRef = ParamsHandle->AsArray().ToSharedRef();
-
-    // Use ScopedTransaction for undo/redo
+    
     const FScopedTransaction Transaction(LOCTEXT("UpdateParamsForTagTransaction", "Update State Params Array"));
-    // Notify the array property is about to change
-    ParamsHandle->NotifyPreChange(); 
+    StructHandle->NotifyPreChange();
+    ParamsHandle->NotifyPreChange();
     
     ArrayHandleRef->EmptyArray();
 
@@ -313,15 +319,13 @@ void FSyStateParamsCustomization::UpdateParamsForTag(const FGameplayTag& Tag)
                     if (NewElementHandle.IsValid() && NewElementHandle->IsValidHandle())
                     {
                         FInstancedStruct NewInstance = CreateParameterStructFromMetadata(StateMetadata);
-                        // Ensure the created instance is valid before serializing
                         if (NewInstance.IsValid())
                         {
                             SerializeParameterStruct(NewInstance, NewElementHandle.ToSharedRef());
                         }
                         else
-                        {
-                            UE_LOG(LogTemp, Warning, TEXT("FSyStateParamsCustomization: Created invalid FInstancedStruct from metadata for tag %s."), *Tag.ToString());
-                            // Remove the potentially invalid item we just added
+                        {                            
+                            UE_LOG(LogTemp, Warning, TEXT("FSyStateParamsCustomization: Created invalid FInstancedStruct from metadata %s for tag %s."), *GetNameSafe(StateMetadata), *Tag.ToString());
                             ArrayHandleRef->DeleteItem(NumElements - 1); 
                         }
                     }
@@ -342,11 +346,10 @@ void FSyStateParamsCustomization::UpdateParamsForTag(const FGameplayTag& Tag)
          UE_LOG(LogTemp, Log, TEXT("FSyStateParamsCustomization: Tag is invalid, clearing Params array."));
     }
     
-    // Notify that the array property change is complete
-    ParamsHandle->NotifyPostChange(EPropertyChangeType::ArrayAdd); // Use appropriate change type
+    ParamsHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
     ParamsHandle->NotifyFinishedChangingProperties();
-    // Also notify the parent struct handle that its child changed
-    StructHandle->NotifyFinishedChangingProperties(); 
+    StructHandle->NotifyPostChange(EPropertyChangeType::ValueSet);
+    StructHandle->NotifyFinishedChangingProperties();
 }
 
 #undef LOCTEXT_NAMESPACE 

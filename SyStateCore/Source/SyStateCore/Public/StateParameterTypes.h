@@ -4,8 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "Metadatas/TestInstanced.h"
 #include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h" // Needed for FSyInstancedStruct
 #include "StateParameterTypes.generated.h"
+
+
 
 /**
  * FSyStateParams - 状态参数
@@ -16,6 +19,7 @@
 USTRUCT(BlueprintType)
 struct SYSTATECORE_API FSyStateParams
 {
+	
 	GENERATED_BODY()
 
 	/** 关联的状态标签 */
@@ -23,8 +27,8 @@ struct SYSTATECORE_API FSyStateParams
 	FGameplayTag Tag;
 	
 	/** 参数数组 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyStateCore|StateParams", meta=(ShowOnlyInnerProperties)) // ShowOnlyInnerProperties might be useful later
-	TArray<FSyInstancedStruct> Params;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyStateCore|StateParams", meta = (BaseStruct = "/Script/SyCore.SyBaseInstancedStruct", ExcludeBaseStruct)) // ShowOnlyInnerProperties might be useful later
+	TArray<FInstancedStruct> Params;
 
 	/** 默认构造函数 */
 	FSyStateParams() = default;
@@ -50,8 +54,29 @@ struct SYSTATECORE_API FSyStateParams
 	{
 		Params.Empty();
 	}
+
+	/**
+	 * PostSerialize - 序列化后处理
+	 * 
+	 * 在序列化完成后调用，用于确保 Tag 和参数的一致性
+	 * 当 Tag 发生变化时，会自动更新参数数组
+	 * 
+	 * @param Ar 序列化存档
+	 * @return 是否成功处理
+	 */
+	void PostSerialize(const FArchive& Ar);
+	
 };
 
+// 为 FSyStateParams 添加 TStructOpsTypeTraits 支持
+template<>
+struct TStructOpsTypeTraits<FSyStateParams> : public TStructOpsTypeTraitsBase2<FSyStateParams>
+{
+	enum
+	{
+		WithPostSerialize = true,
+	};
+};
 
 /**
  * FSyStateParameterSet - 状态参数集
@@ -126,9 +151,9 @@ struct SYSTATECORE_API FSyStateParameterSet
 	 * @param bLogOnDuplicate 如果为 true，并且检测到重复 Tag，则会输出警告日志。
 	 * @return 一个包含状态参数的 TMap。
 	 */
-	TMap<FGameplayTag, TArray<FSyInstancedStruct>> GetParametersAsMap(bool bLogOnDuplicate = true) const
+	TMap<FGameplayTag, TArray<FInstancedStruct>> GetParametersAsMap(bool bLogOnDuplicate = true) const
 	{
-		TMap<FGameplayTag, TArray<FSyInstancedStruct>> ResultMap;
+		TMap<FGameplayTag, TArray<FInstancedStruct>> ResultMap;
 		for (const FSyStateParams& StateParams : Parameters)
 		{
 			if (ResultMap.Contains(StateParams.Tag))

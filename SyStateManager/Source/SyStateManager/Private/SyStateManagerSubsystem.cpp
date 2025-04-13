@@ -75,7 +75,7 @@ FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const 
         for (const auto& Pair : Record.Operation.Modifier.StateModifications.GetParametersAsMap())
         {
             const FGameplayTag& StateTag = Pair.Key;
-            const TArray<FSyInstancedStruct>& ParamsToMerge = Pair.Value;
+            const TArray<FInstancedStruct>& ParamsToMerge = Pair.Value;
 
             // 查找临时 Map 中是否已有该 StateTag 的条目
             TArray<FSyInstancedStruct>& ExistingParams = AggregatedParamsMap.FindOrAdd(StateTag);
