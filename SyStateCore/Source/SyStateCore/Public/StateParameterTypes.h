@@ -30,11 +30,11 @@ struct SYSTATECORE_API FSyStateParams
 	TArray<FInstancedStruct> Params;
 
 	/**
-	 *	TODO: 被 UE 气晕, 需要强制序列化，不然在 PostSerialize 中会丢失
-	 *	(除了 PostSerialize 没地方拿得到 Tag 更新，除非变 UObject 然后 PostEditChangeProperty)
-	 *	且要求 EditAnywhere (或其它隐性原因)，不然在关卡编辑器对象 PostSerialize 时有一次调用会变成 None 
+	 *	TODO: 重构！！！被 UE 气晕, 需要找到手段强制序列化(UPROPERTY不够)，不然重载稳定丢失 
+	 *	除 PostSerialize 目前没地方正常拿 Tag 更新回调，除非变 UObject 然后 PostEditChangeProperty 
+	 *	且要求加 Anywhere 系 Flag，不然在关卡编辑器中对象 PostSerialize 时有一次调用会变成 None 
 	 */
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "false", EditConditionHides))
+	UPROPERTY(VisibleAnywhere, meta = (EditCondition = "false", EditConditionHides))
 	FGameplayTag LastTag = FGameplayTag::EmptyTag;
 
 	/** 默认构造函数 */

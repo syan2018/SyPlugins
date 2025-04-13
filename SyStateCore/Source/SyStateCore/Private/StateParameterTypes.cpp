@@ -2,7 +2,16 @@
 #include "DS_TagMetadata.h"
 #include "StateMetadataTypes.h"
 
-
+/**
+ * PostSerialize - 序列化后处理
+ * 
+ * TODO: 重构！！！
+ *
+ * 没法正常拿到Tag更新回调的下策令人绝望，存在一系列Bug
+ * 在Default处要求重复选择Tag才能正常触发PostSerialize逻辑
+ * 以及使用LastTag进行标识恶心至极，就就不信没有其它阳间法子了
+ * 
+ */
 void FSyStateParams::PostSerialize(const FArchive& Ar)
 {
 #if WITH_EDITOR
@@ -29,7 +38,7 @@ void FSyStateParams::PostSerialize(const FArchive& Ar)
 	TArray<UO_TagMetadata*> AllMetadata = UDS_TagMetadata::GetTagMetadata(Tag);
 	if (AllMetadata.Num() == 0)
 	{
-		// ClearParams();
+		ClearParams();
 		return;
 	}
 
