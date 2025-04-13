@@ -5,15 +5,23 @@
 
 void FSyStateParams::PostSerialize(const FArchive& Ar)
 {
+#if WITH_EDITOR
+	
 	if (!Ar.IsLoading() && !Ar.IsSaving())
 	{
 		return;
 	}
 
+	if (LastTag == Tag)
+	{
+		return;
+	}
+	LastTag = Tag;
+
 	// 如果 Tag 无效，清空参数数组
 	if (!Tag.IsValid())
 	{
-		// ClearParams();
+		ClearParams();
 		return;
 	}
 
@@ -61,4 +69,7 @@ void FSyStateParams::PostSerialize(const FArchive& Ar)
 
 	// 更新参数数组
 	Params = MoveTemp(NewParams);
+
+#endif
+	
 }

@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "Metadatas/TestInstanced.h"
 #include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h" // Needed for FSyInstancedStruct
 #include "StateParameterTypes.generated.h"
 
@@ -29,6 +28,14 @@ struct SYSTATECORE_API FSyStateParams
 	/** 参数数组 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyStateCore|StateParams", meta = (BaseStruct = "/Script/SyCore.SyBaseInstancedStruct", ExcludeBaseStruct)) // ShowOnlyInnerProperties might be useful later
 	TArray<FInstancedStruct> Params;
+
+	/**
+	 *	TODO: 被 UE 气晕, 需要强制序列化，不然在 PostSerialize 中会丢失
+	 *	(除了 PostSerialize 没地方拿得到 Tag 更新，除非变 UObject 然后 PostEditChangeProperty)
+	 *	且要求 EditAnywhere (或其它隐性原因)，不然在关卡编辑器对象 PostSerialize 时有一次调用会变成 None 
+	 */
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "false", EditConditionHides))
+	FGameplayTag LastTag = FGameplayTag::EmptyTag;
 
 	/** 默认构造函数 */
 	FSyStateParams() = default;
@@ -62,7 +69,6 @@ struct SYSTATECORE_API FSyStateParams
 	 * 当 Tag 发生变化时，会自动更新参数数组
 	 * 
 	 * @param Ar 序列化存档
-	 * @return 是否成功处理
 	 */
 	void PostSerialize(const FArchive& Ar);
 	
