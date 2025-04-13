@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "StateParameterTypes.h"
-#include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h"
+#include "StructUtils/InstancedStruct.h"
 #include "OperationTypes.generated.h"
 
 /**
@@ -26,7 +26,7 @@ struct SYOPERATION_API FSyOperationSource
     FSyOperationSource(const FGameplayTag& InSourceTypeTag) : SourceTypeTag(InSourceTypeTag) {}
 
     /** 从标签和参数构造 */
-    FSyOperationSource(const FGameplayTag& InSourceTypeTag, const FSyInstancedStruct& InParameters)
+    FSyOperationSource(const FGameplayTag& InSourceTypeTag, const FInstancedStruct& InParameters)
         : SourceTypeTag(InSourceTypeTag), Parameters(InParameters) {}
 
     /** 来源类型标签 */
@@ -35,7 +35,7 @@ struct SYOPERATION_API FSyOperationSource
 
     /** 来源参数 */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Source")
-    FSyInstancedStruct Parameters;
+    FInstancedStruct Parameters;
 };
 
 
@@ -57,7 +57,7 @@ struct SYOPERATION_API FSyOperationTarget
     FSyOperationTarget(const FGameplayTag& InTargetTypeTag): TargetTypeTag(InTargetTypeTag) {}
 
     /** 从标签、参数构造 */
-    FSyOperationTarget(const FGameplayTag& InTargetTypeTag, const FSyInstancedStruct& InParameters)
+    FSyOperationTarget(const FGameplayTag& InTargetTypeTag, const FInstancedStruct& InParameters)
         : TargetTypeTag(InTargetTypeTag), Parameters(InParameters) {}
 
     /** 目标类型标签 */
@@ -66,7 +66,7 @@ struct SYOPERATION_API FSyOperationTarget
 
     /** 目标参数 */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Target")
-    FSyInstancedStruct Parameters;
+    FInstancedStruct Parameters;
     
 };
 
@@ -94,13 +94,13 @@ struct SYOPERATION_API FSyOperationModifier
     FSyStateParameterSet StateModifications;
 
     /** 添加状态修改 */
-    void AddStateModification(const FGameplayTag& StateTag, const FSyInstancedStruct& Parameters)
+    void AddStateModification(const FGameplayTag& StateTag, const FInstancedStruct& Parameters)
     {
         StateModifications.AddStateParam(StateTag, Parameters);
     }
 
     /** 添加多个状态修改 */
-    void AddStateModifications(const FGameplayTag& StateTag, const TArray<FSyInstancedStruct>& Parameters)
+    void AddStateModifications(const FGameplayTag& StateTag, const TArray<FInstancedStruct>& Parameters)
     {
         StateModifications.AddStateParams(StateTag, Parameters);
     }

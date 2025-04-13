@@ -8,6 +8,7 @@
 #include "Runtime/Launch/Resources/Version.h" // 用于 ENGINE_MAJOR_VERSION 等宏
 #include "SyStateManagerSaveGame.h" // 包含自定义 SaveGame 类
 #include "Kismet/GameplayStatics.h" // 包含 GameplayStatics
+#include "StructUtils/InstancedStruct.h"
 
 // 定义一个简单的日志分类
 DEFINE_LOG_CATEGORY_STATIC(LogSyStateManager, Log, All); // 启用日志以方便调试
@@ -53,7 +54,7 @@ FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const 
 {
     FSyStateParameterSet AggregatedResult;
     // 使用一个临时的Map来聚合参数，处理覆盖逻辑
-    TMap<FGameplayTag, TArray<FSyInstancedStruct>> AggregatedParamsMap;
+    TMap<FGameplayTag, TArray<FInstancedStruct>> AggregatedParamsMap;
 
     // TODO: [拓展] 性能考量: 如果 ModificationLog 非常大，此线性扫描可能成为瓶颈。
     for (const FSyStateModificationRecord& Record : ModificationLog)
@@ -78,7 +79,7 @@ FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const 
             const TArray<FInstancedStruct>& ParamsToMerge = Pair.Value;
 
             // 查找临时 Map 中是否已有该 StateTag 的条目
-            TArray<FSyInstancedStruct>& ExistingParams = AggregatedParamsMap.FindOrAdd(StateTag);
+            TArray<FInstancedStruct>& ExistingParams = AggregatedParamsMap.FindOrAdd(StateTag);
             
             // 合并参数：这里简单地追加。如果需要覆盖或更复杂的逻辑，在此修改。
             // 或者，如果 FSyStateParams 提供了合并方法，则调用该方法。

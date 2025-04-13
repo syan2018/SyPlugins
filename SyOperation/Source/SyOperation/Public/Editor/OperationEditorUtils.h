@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h"
+#include "StructUtils/InstancedStruct.h"
 #include "DS_TagMetadata.h"
 #include "OperationEditorUtils.generated.h"
 
@@ -31,7 +31,7 @@ public:
 
     /** 根据Tag更新FInstancedStruct的类型 */
     UFUNCTION(BlueprintCallable, Category = "SyOperation|Editor")
-    static bool UpdateInstancedStructTypeForTag(FSyInstancedStruct& InstancedStruct, const FGameplayTag& Tag)
+    static bool UpdateInstancedStructTypeForTag(FInstancedStruct& InstancedStruct, const FGameplayTag& Tag)
     {
         // 获取参数结构体类型
         if (UScriptStruct* ParamStruct = GetParameterStructTypeForTag(Tag))
@@ -44,7 +44,7 @@ public:
 
     /** 检查FInstancedStruct的类型是否与Tag匹配 */
     UFUNCTION(BlueprintCallable, Category = "SyOperation|Editor")
-    static bool ValidateInstancedStructTypeForTag(const FSyInstancedStruct& InstancedStruct, const FGameplayTag& Tag)
+    static bool ValidateInstancedStructTypeForTag(const FInstancedStruct& InstancedStruct, const FGameplayTag& Tag)
     {
         // 获取参数结构体类型
         if (UScriptStruct* ParamStruct = GetParameterStructTypeForTag(Tag))

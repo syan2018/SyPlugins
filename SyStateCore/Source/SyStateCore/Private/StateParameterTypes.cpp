@@ -67,7 +67,7 @@ void FSyStateParams::PostSerialize(const FArchive& Ar)
 	{
 		if (StateMetadata && StateMetadata->GetValueDataType())
 		{
-			FSyInstancedStruct NewInstance;
+			FInstancedStruct NewInstance;
 			NewInstance.InitializeAs(StateMetadata->GetValueDataType());
 			if (NewInstance.IsValid())
 			{

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h" // Needed for FSyInstancedStruct
+#include "StructUtils/InstancedStruct.h"
 #include "StateParameterTypes.generated.h"
 
 
@@ -41,17 +41,17 @@ struct SYSTATECORE_API FSyStateParams
 	FSyStateParams() = default;
 	
 	/** 从标签和参数数组构造 */
-	FSyStateParams(const FGameplayTag& InTag, const TArray<FSyInstancedStruct>& InParams = TArray<FSyInstancedStruct>())
+	FSyStateParams(const FGameplayTag& InTag, const TArray<FInstancedStruct>& InParams = TArray<FInstancedStruct>())
 		: Tag(InTag), Params(InParams) {}
 
 	/** 添加参数 */
-	void AddParam(const FSyInstancedStruct& Param)
+	void AddParam(const FInstancedStruct& Param)
 	{
 		Params.Add(Param);
 	}
 
 	/** 添加多个参数 */
-	void AddParams(const TArray<FSyInstancedStruct>& InParams)
+	void AddParams(const TArray<FInstancedStruct>& InParams)
 	{
 		Params.Append(InParams);
 	}
@@ -107,7 +107,7 @@ struct SYSTATECORE_API FSyStateParameterSet
      * 从 TMap<Tag, ParamArray> 构造 FSyStateParameterSet。
      * @param InMap 输入的 TMap，Key 是 Tag，Value 是 FInstancedStruct 参数数组。
      */
-	explicit FSyStateParameterSet(const TMap<FGameplayTag, TArray<FSyInstancedStruct>>& InMap)
+	explicit FSyStateParameterSet(const TMap<FGameplayTag, TArray<FInstancedStruct>>& InMap)
 	{
 		Parameters.Empty(InMap.Num()); // Clear and reserve
 		for (const auto& Pair : InMap)
@@ -128,7 +128,7 @@ struct SYSTATECORE_API FSyStateParameterSet
      * @param InMap 输入的 TMap。
      * @return 对自身的引用。
      */
-    FSyStateParameterSet& operator=(const TMap<FGameplayTag, TArray<FSyInstancedStruct>>& InMap)
+    FSyStateParameterSet& operator=(const TMap<FGameplayTag, TArray<FInstancedStruct>>& InMap)
     {
         Parameters.Empty(InMap.Num()); // Clear and reserve
         for (const auto& Pair : InMap)
@@ -204,7 +204,7 @@ struct SYSTATECORE_API FSyStateParameterSet
      * @param StateTag 要关联的 Tag。
      * @param Param 要添加的参数。
      */
-	void AddStateParam(const FGameplayTag& StateTag, const FSyInstancedStruct& Param)
+	void AddStateParam(const FGameplayTag& StateTag, const FInstancedStruct& Param)
 	{
 		if (!StateTag.IsValid()) return;
 		FSyStateParams* ExistingParams = FindStateParams(StateTag);
@@ -214,7 +214,7 @@ struct SYSTATECORE_API FSyStateParameterSet
 		}
 		else
 		{
-			Parameters.Emplace(StateTag, TArray<FSyInstancedStruct>{Param});
+			Parameters.Emplace(StateTag, TArray<FInstancedStruct>{Param});
 		}
 	}
 
@@ -225,7 +225,7 @@ struct SYSTATECORE_API FSyStateParameterSet
      * @param StateTag 要关联的 Tag。
      * @param InParams 要添加的参数数组。
      */
-	void AddStateParams(const FGameplayTag& StateTag, const TArray<FSyInstancedStruct>& InParams)
+	void AddStateParams(const FGameplayTag& StateTag, const TArray<FInstancedStruct>& InParams)
 	{
 		if (!StateTag.IsValid() || InParams.Num() == 0) return;
 		FSyStateParams* ExistingParams = FindStateParams(StateTag);
