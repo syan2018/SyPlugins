@@ -2,6 +2,7 @@
 
 #include "States/SyStateComponent.h"
 #include "SyStateManager/Public/SyStateManagerSubsystem.h" // 包含 StateManager 子系统
+#include "Components/SyEntityComponent.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Logging/LogMacros.h"
@@ -11,14 +12,16 @@ DEFINE_LOG_CATEGORY_STATIC(LogSyStateComponent, Log, All); // 添加日志分类
 USyStateComponent::USyStateComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
-    // TargetTypeTag 可以在蓝图或派生类中设置默认值
 }
 
+// TODO: 优化初始化时序，交由EntityComponent进行统一激活 
 void USyStateComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    // TODO: 优化初始化时序，交由EntityComponent进行统一激活 
+    // 查找并缓存EntityComponent
+    FindAndCacheEntityComponent();
+
     // 1. 应用默认初始化数据
     ApplyInitializationData(DefaultInitData);
 
@@ -51,6 +54,40 @@ void USyStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
     Super::EndPlay(EndPlayReason);
 }
 
+void USyStateComponent::FindAndCacheEntityComponent()
+{
+    if (!GetOwner())
+    {
+        return;
+    }
+
+    // 查找EntityComponent
+    EntityComponent = GetOwner()->FindComponentByClass<USyEntityComponent>();
+    if (!EntityComponent)
+    {
+        UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Could not find EntityComponent on owner actor."), *GetNameSafe(GetOwner()));
+    }
+}
+
+FGameplayTag USyStateComponent::GetTargetTypeTag() const
+{
+    if (!EntityComponent)
+    {
+        return FGameplayTag();
+    }
+
+    // 获取EntityComponent的所有Tags
+    FGameplayTagContainer EntityTags = EntityComponent->GetEntityTags();
+    
+    // 返回第一个Tag作为目标类型标签
+    if (EntityTags.Num() > 0)
+    {
+        return EntityTags.First();
+    }
+
+    return FGameplayTag();
+}
+
 void USyStateComponent::ApplyInitializationData(const FSyStateParameterSet& InitData)
 {
     // 调用 FSyStateCategories 的方法来应用初始化数据
@@ -61,15 +98,6 @@ void USyStateComponent::ApplyInitializationData(const FSyStateParameterSet& Init
     // 触发本地状态变更事件
     OnLocalStateDataChanged.Broadcast();
 }
-
-void USyStateComponent::SetTargetTypeTag(const FGameplayTag& NewTag)
-{
-    TargetTypeTag = NewTag;
-    // TODO: [拓展] 如果已经连接到 StateManager，可能需要重新评估或触发一次同步？
-    // 这取决于是否希望 TargetTag 动态改变后立即反应历史记录。
-    // ApplyAggregatedModifications();
-}
-
 
 void USyStateComponent::TryConnectToStateManager()
 {
@@ -120,6 +148,7 @@ void USyStateComponent::DisconnectFromStateManager()
     // 不需要手动将 StateManagerSubsystem 设为 nullptr，因为它是 TObjectPtr，会自动处理
 }
 
+
 void USyStateComponent::HandleStateModificationRecorded(const FSyStateModificationRecord& NewRecord)
 {
     if (!StateManagerSubsystem)
@@ -128,19 +157,24 @@ void USyStateComponent::HandleStateModificationRecorded(const FSyStateModificati
         return;
     }
 
-    // 检查记录的目标类型是否与本组件匹配
-    if (TargetTypeTag.IsValid() && NewRecord.Operation.Target.TargetTypeTag.MatchesTag(TargetTypeTag)) // 使用 MatchesTag 可能更灵活
+    // 获取当前的目标类型标签
+    FGameplayTag CurrentTargetTag = GetTargetTypeTag();
+    if (!CurrentTargetTag.IsValid())
     {
-        // TODO: [拓展] 在这里可以添加更复杂的过滤逻辑，例如检查 EntityId (如果实现了的话)
-        // if (NewRecord.Operation.Target.TargetEntityId != this->EntityId) { return; }
+        return; // 如果没有有效的目标标签，则忽略所有记录
+    }
 
+    // TODO: 消息分发应该由Manager索引和优化，避免边缘处理 
+    
+    // 检查记录的目标类型是否与本组件匹配
+    if (NewRecord.Operation.Target.TargetTypeTag.MatchesTag(CurrentTargetTag))
+    {
         UE_LOG(LogSyStateComponent, Verbose, TEXT("%s: Relevant state record received (OpID: %s). Applying aggregated modifications."), 
             *GetNameSafe(GetOwner()), *NewRecord.Operation.OperationId.ToString());
         
         // 重新获取并应用聚合后的状态
         ApplyAggregatedModifications();
     }
-    // else: 如果 TargetTypeTag 无效，或者不匹配，则忽略此记录
 }
 
 void USyStateComponent::ApplyAggregatedModifications()
@@ -150,21 +184,22 @@ void USyStateComponent::ApplyAggregatedModifications()
         UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Cannot apply aggregated modifications, StateManagerSubsystem is null."), *GetNameSafe(GetOwner()));
         return;
     }
-    if (!TargetTypeTag.IsValid())
+
+    // 获取当前的目标类型标签
+    FGameplayTag CurrentTargetTag = GetTargetTypeTag();
+    if (!CurrentTargetTag.IsValid())
     {
         UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Cannot apply aggregated modifications, TargetTypeTag is invalid."), *GetNameSafe(GetOwner()));
-        return; // 如果没有有效的 TargetTag，无法获取聚合状态
+        return;
     }
 
     // 从 StateManager 获取聚合后的修改
-    FSyStateParameterSet AggregatedMods = StateManagerSubsystem->GetAggregatedModifications(TargetTypeTag);
+    FSyStateParameterSet AggregatedMods = StateManagerSubsystem->GetAggregatedModifications(CurrentTargetTag);
 
     // 调用 FSyStateCategories 的方法来应用修改
-    // 注意：这里需要将 FSyStateParameterSet 的内容转换为 ApplyStateModifications 需要的 TMap<FGameplayTag, FSyStateParams>
-    // 如果 ApplyStateModifications 的实现是智能合并/覆盖，则此方法有效。
     CurrentStateCategories.ApplyStateModifications(AggregatedMods.GetParametersAsMap()); 
     
-    UE_LOG(LogSyStateComponent, Verbose, TEXT("%s: Applied aggregated modifications for TargetTag %s."), *GetNameSafe(GetOwner()), *TargetTypeTag.ToString());
+    UE_LOG(LogSyStateComponent, Verbose, TEXT("%s: Applied aggregated modifications for TargetTag %s."), *GetNameSafe(GetOwner()), *CurrentTargetTag.ToString());
 
     // 触发本地状态变更事件
     OnLocalStateDataChanged.Broadcast();

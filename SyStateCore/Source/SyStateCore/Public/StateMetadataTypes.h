@@ -95,7 +95,7 @@ public:
 
 protected:
     /** 状态标签 */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyStateCore|StateMetadata")
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "SyStateCore|StateMetadata")
     FGameplayTag StateTag;
 
     /** 辅助方法：验证参数类型并调用子类实现 */

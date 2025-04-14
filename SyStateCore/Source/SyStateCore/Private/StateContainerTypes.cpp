@@ -22,8 +22,6 @@ void FSyStateCategories::ApplyInitData(const FSyStateParameterSet& InitData)
         for (const FInstancedStruct& InitParam : StateParams)
         {
             // 从TagMetadata系统获取元数据实例列表
-            // TODO: Review this logic. Should probably create new instances based on InitParam type?
-            // Current logic seems to fetch existing metadata and apply params to them.
             TArray<UO_TagMetadata*> MetadataList = UDS_TagMetadata::GetTagMetadata(StateTag);
             
             // 遍历所有元数据实例
@@ -57,7 +55,6 @@ void FSyStateCategories::ApplyStateModifications(const TMap<FGameplayTag, TArray
             for (const FInstancedStruct& ModParam : StateParams)
             {
                 // 从TagMetadata系统获取元数据实例列表
-                // TODO: Review this logic. Should apply ModParam only to relevant metadata instances within MetadataArray.
                 TArray<UO_TagMetadata*> MetadataList = UDS_TagMetadata::GetTagMetadata(StateTag);
                 
                 // 遍历所有元数据实例

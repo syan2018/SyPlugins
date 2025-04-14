@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
 #include "SyStateCore.h" 
+#include "Components/SyEntityComponent.h"
 #include "SyStateManager/Public/StateModificationRecord.h" // 包含 FSyStateModificationRecord
 #include "SyStateComponent.generated.h"
 
@@ -57,17 +58,11 @@ public:
 
     /**
      * @brief 获取本组件关联的目标类型标签。
-     *        StateManager 会使用此标签来初步筛选相关的操作记录。
-     *        建议在派生类或 Actor 实例中设置。
+     *        从关联的EntityComponent中获取第一个Tag作为目标类型标签。
+     *        如果没有关联的EntityComponent或没有Tag，则返回无效标签。
      */
     UFUNCTION(BlueprintPure, Category = "SyState|Config")
-    FGameplayTag GetTargetTypeTag() const { return TargetTypeTag; }
-
-    /**
-     * @brief 设置本组件关联的目标类型标签。
-     */
-    UFUNCTION(BlueprintCallable, Category = "SyState|Config")
-    void SetTargetTypeTag(const FGameplayTag& NewTag);
+    FGameplayTag GetTargetTypeTag() const;
 
     /**
      * @brief 是否启用与全局 StateManager 的同步
@@ -94,14 +89,14 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Data", meta = (AllowPrivateAccess = "true"))
     FSyStateCategories CurrentStateCategories;
 
-    /** 本组件对应的目标类型标签，用于 StateManager 筛选 */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SyState|Config", meta = (AllowPrivateAccess = "true"))
-    FGameplayTag TargetTypeTag;
-
 private:
     /** 缓存 StateManager 子系统指针 */
     UPROPERTY(Transient)
     TObjectPtr<USyStateManagerSubsystem> StateManagerSubsystem;
+
+    /** 缓存关联的EntityComponent指针 */
+    UPROPERTY(Transient)
+    TObjectPtr<USyEntityComponent> EntityComponent;
 
     /**
      * @brief 处理从 StateManager 接收到的新状态修改记录。
@@ -125,6 +120,11 @@ private:
      *        内部会调用 FSyStateCategories 的 ApplyStateModifications 方法。
      */
     void ApplyAggregatedModifications();
+
+    /**
+     * @brief 查找并缓存关联的EntityComponent
+     */
+    void FindAndCacheEntityComponent();
 
     // TODO: [拓展] 可能需要一个 Entity ID (FGuid) 来更精确地匹配 StateManager 中的目标。
     // 这个 ID 可以由外部系统设置，或者自动生成。
