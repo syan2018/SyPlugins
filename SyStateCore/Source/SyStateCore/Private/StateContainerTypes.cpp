@@ -1,79 +1,133 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "StateContainerTypes.h"
-#include "StateParameterTypes.h" // Include the parameters header
-#include "StateMetadataTypes.h" // Include metadata header for USyStateMetadataBase
-#include "DS_TagMetadata.h" // Include for UDS_TagMetadata
+#include "StateParameterTypes.h"
+#include "StateMetadataTypes.h"
+#include "DS_TagMetadata.h"
+#include "Logging/LogMacros.h"
 
-// Implementation for FSyStateCategories::ApplyInitData
+// --- Helper Function --- 
+
+/**
+ * Finds an existing instance of a specific metadata type within the local storage for a tag, 
+ * or adds the provided template instance if not found.
+ *
+ * @param LocalMetadataArray The FSyStateMetadatas storage for the specific tag.
+ * @param TemplateMetadata The template instance (typically from UDS_TagMetadata) representing the desired type.
+ * @param StateTag The state tag this instance belongs to (used if adding).
+ * @return Pointer to the found or newly added USyStateMetadataBase instance, or nullptr if TemplateMetadata was invalid.
+ */
+static USyStateMetadataBase* FindOrAddLocalMetadataInstance(FSyStateMetadatas& LocalMetadataArray, USyStateMetadataBase* TemplateMetadata, const FGameplayTag& StateTag)
+{
+    if (!TemplateMetadata) return nullptr;
+
+    // Try to find existing local instance by type
+    for (TObjectPtr<UO_TagMetadata>& LocalInstancePtr : LocalMetadataArray.MetadataArray)
+    {
+        USyStateMetadataBase* LocalInstance = Cast<USyStateMetadataBase>(LocalInstancePtr);
+        if (LocalInstance && LocalInstance->GetClass() == TemplateMetadata->GetClass())
+        {
+            return LocalInstance; // Found existing
+        }
+    }
+
+    // Not found, add the template instance 
+    // WARNING: Assumes UDS_TagMetadata provides instances safe to add directly.
+    // Consider DuplicateObject if UDS returns shared instances that need unique state.
+    LocalMetadataArray.AddMetadata(TemplateMetadata);
+    TemplateMetadata->SetStateTag(StateTag); // Ensure tag is set on the added instance
+    return TemplateMetadata; // Return the newly added instance
+}
+
+
+// --- FSyStateCategories Implementation --- 
+
 void FSyStateCategories::ApplyInitData(const FSyStateParameterSet& InitData)
 {
-    // 遍历所有初始化数据
-    for (const auto& Params : InitData.Parameters) // Use Parameters from FSyStateParameterSet
+    // Iterate through all provided initialization entries (Tag + Params)
+    for (const FSyStateParams& ParamsEntry : InitData.Parameters)
     {
-        const FGameplayTag& StateTag = Params.Tag;
-        const TArray<FInstancedStruct>& StateParams = Params.Params;
+        const FGameplayTag& StateTag = ParamsEntry.Tag;
+        const TArray<FInstancedStruct>& InitParams = ParamsEntry.Params; // Provided init parameters for this tag
 
-        // 获取或创建该状态标签的元数据数组
-        FSyStateMetadatas& MetadataArray = StateData.FindOrAdd(StateTag);
+        // Get metadata instances defined for this tag by the system (UDS)
+        TArray<UO_TagMetadata*> MetadataInstances = UDS_TagMetadata::GetTagMetadata(StateTag);
 
-        // 应用每个初始化参数
-        for (const FInstancedStruct& InitParam : StateParams)
+        // Get or create local storage for this tag
+        FSyStateMetadatas& LocalMetadataArray = StateData.FindOrAdd(StateTag);
+
+        // Iterate through each metadata type defined for the tag
+        for (UO_TagMetadata* MetadataInstanceTemplate : MetadataInstances)
         {
-            // 从TagMetadata系统获取元数据实例列表
-            TArray<UO_TagMetadata*> MetadataList = UDS_TagMetadata::GetTagMetadata(StateTag);
-            
-            // 遍历所有元数据实例
-            for (UO_TagMetadata* Metadata : MetadataList)
+            USyStateMetadataBase* TemplateMetadata = Cast<USyStateMetadataBase>(MetadataInstanceTemplate);
+            if (!TemplateMetadata) continue;
+
+            // Find or add the corresponding local instance
+            USyStateMetadataBase* TargetMetadata = FindOrAddLocalMetadataInstance(LocalMetadataArray, TemplateMetadata, StateTag);
+            if (!TargetMetadata) continue; // Should not happen if TemplateMetadata is valid
+
+            // Find a matching initialization parameter based on type
+            bool bFoundMatchingParam = false;
+            for (const FInstancedStruct& InitParam : InitParams)
             {
-                // 初始化元数据对象
-                if (USyStateMetadataBase* StateMetadata = Cast<USyStateMetadataBase>(Metadata))
+                // --- Type Matching Placeholder ---
+                // Ideally, check type compatibility here:
+                // if (TargetMetadata->CanInitializeFrom(InitParam))
+                // For now, we assume InitializeFromParams handles mismatch or we try the first valid param.
+                if (InitParam.IsValid()) // Simple check: Is the param data valid?
                 {
-                    StateMetadata->SetStateTag(StateTag);
-                    StateMetadata->InitializeFromParams(InitParam);
-                    MetadataArray.AddMetadata(StateMetadata); // Adds potentially existing metadata again?
+                    // Initialize using the first matching parameter found
+                    TargetMetadata->InitializeFromParams(InitParam);
+                    bFoundMatchingParam = true;
+                    // Assuming one init param per metadata type is intended in the InitParams array
+                    break; 
                 }
+            }
+
+            // Handle case where no suitable init param was found for this metadata type
+            if (!bFoundMatchingParam)
+            {
+                // If the instance was newly added by FindOrAddLocalMetadataInstance, it has defaults.
+                // If it existed, it retains its old state.
+                UE_LOG(LogTemp, Verbose, TEXT("FSyStateCategories::ApplyInitData: No suitable initialization parameter found in provided InitParams for metadata type '%s' for tag '%s'. Instance will use defaults or retain existing state."),
+                       *TargetMetadata->GetClass()->GetName(), *StateTag.ToString());
             }
         }
     }
 }
 
-// Implementation for FSyStateCategories::ApplyStateModifications
 void FSyStateCategories::ApplyStateModifications(const TMap<FGameplayTag, TArray<FInstancedStruct>>& StateModifications)
 {
-    // 遍历所有状态修改
+    // Iterate through all modification intentions (Tag + ModParams)
     for (const auto& StatePair : StateModifications)
     {
         const FGameplayTag& StateTag = StatePair.Key;
-        const TArray<FInstancedStruct>& StateParams = StatePair.Value;
+        const TArray<FInstancedStruct>& ModificationParams = StatePair.Value;
 
-        // 获取该状态标签的元数据数组
-        if (FSyStateMetadatas* MetadataArray = StateData.Find(StateTag))
+        if (ModificationParams.IsEmpty()) continue;
+
+        // Get or create local storage for this tag
+        FSyStateMetadatas& LocalMetadataArray = StateData.FindOrAdd(StateTag);
+        
+        // Get metadata instances defined for this tag by the system (UDS)
+        TArray<UO_TagMetadata*> TagDefinedInstances = UDS_TagMetadata::GetTagMetadata(StateTag);
+
+        // Iterate through each metadata type defined for the tag
+        for (UO_TagMetadata* TagDefinedInstance : TagDefinedInstances)
         {
-            // 应用每个修改参数到所有匹配的元数据对象
-            for (const FInstancedStruct& ModParam : StateParams)
+            USyStateMetadataBase* TemplateMetadata = Cast<USyStateMetadataBase>(TagDefinedInstance);
+            if (!TemplateMetadata) continue;
+
+            // Find or add the corresponding local instance
+            USyStateMetadataBase* TargetInstance = FindOrAddLocalMetadataInstance(LocalMetadataArray, TemplateMetadata, StateTag);
+            if (!TargetInstance) continue;
+
+            // Apply modifications - let the instance decide if a param applies
+            for (const FInstancedStruct& ModParam : ModificationParams)
             {
-                // 从TagMetadata系统获取元数据实例列表
-                TArray<UO_TagMetadata*> MetadataList = UDS_TagMetadata::GetTagMetadata(StateTag);
-                
-                // 遍历所有元数据实例
-                for (UO_TagMetadata* MetadataTemplate : MetadataList) // Use a different name to avoid confusion
-                {
-                    // 查找匹配类型的元数据对象 in the current StateData
-                    for (TObjectPtr<UO_TagMetadata>& ExistingMetadata : MetadataArray->MetadataArray)
-                    {
-                        if (USyStateMetadataBase* StateMetadata = Cast<USyStateMetadataBase>(ExistingMetadata))
-                        {
-                            // Check if the existing metadata matches the type from TagMetadata system
-                            if (MetadataTemplate && StateMetadata->GetClass() == MetadataTemplate->GetClass())
-                            {
-                                // 应用修改
-                                StateMetadata->ApplyModification(ModParam);
-                            }
-                        }
-                    }
-                }
+                // ApplyModification should internally check if ModParam type is relevant
+                TargetInstance->ApplyModification(ModParam);
             }
         }
     }
-} 
+}

@@ -41,9 +41,8 @@ void USyFlowNode_StateOperationBase::ExecuteInput(const FName& PinName)
     FSyOperation Operation(Source, Modifier, OperationTarget);
 
     // Record the operation with the State Manager
-    // TODO: Confirm the exact StateManager function to call. 
-    // Assuming RecordStateModification accepts FSyOperation directly or needs conversion.
-    // Example: StateManager->RecordStateModification(Operation); 
+    StateManager->RecordOperation(Operation);
+    
     UE_LOG(LogSyFlowNodeStateOpBase, Log, TEXT("%s: Recording state operation (OpID: %s) for TargetTag: %s"), 
         *GetNodeTitle().ToString(), *Operation.OperationId.ToString(), *Operation.Target.TargetTypeTag.ToString());
 
