@@ -196,6 +196,7 @@ struct SYSTATECORE_API FSyStateParameterSet
 	}
 
 	// --- Compatibility Interfaces ---
+	
 
 	/** 
      * 添加或更新指定 Tag 的单个状态参数。
@@ -207,14 +208,33 @@ struct SYSTATECORE_API FSyStateParameterSet
 	void AddStateParam(const FGameplayTag& StateTag, const FInstancedStruct& Param)
 	{
 		if (!StateTag.IsValid()) return;
-		FSyStateParams* ExistingParams = FindStateParams(StateTag);
-		if (ExistingParams)
+		if (FSyStateParams* ExistingParams = FindStateParams(StateTag))
 		{
 			ExistingParams->AddParam(Param);
 		}
 		else
 		{
 			Parameters.Emplace(StateTag, TArray<FInstancedStruct>{Param});
+		}
+	}
+
+	/** 
+	 * 添加或更新完整FSyStateParams。
+	 * 如果 Tag 已存在，覆盖参数。
+	 * 如果 Tag 不存在，添加一个新的 FSyStateParams 条目。
+	 * @param Param 要添加的FSyStateParams。
+	 */
+	void AddStateParams(const FSyStateParams& Param)
+	{
+		if (!Param.Tag.IsValid()) return;
+		if (FSyStateParams* ExistingParams = FindStateParams(Param.Tag))
+		{
+			ExistingParams->ClearParams();
+			ExistingParams->AddParams(Param.Params);
+		}
+		else
+		{
+			Parameters.Add(Param);
 		}
 	}
 

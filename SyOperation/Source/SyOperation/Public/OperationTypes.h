@@ -117,6 +117,11 @@ struct SYOPERATION_API FSyOperationModifier
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Modifier")
     FSyStateParameterSet StateModifications;
 
+    void AddStateModifications(const FSyStateParams& InParams)
+    {
+        StateModifications.AddStateParams(InParams);
+    }
+
     /** 添加状态修改 */
     void AddStateModification(const FGameplayTag& StateTag, const FInstancedStruct& Parameters)
     {

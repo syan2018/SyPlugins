@@ -14,7 +14,7 @@ class SYFLOWIMPL_API USyFlowNode_MessageBase : public UFlowNode, public ISyMessa
 
 public:
     // 节点分类
-    virtual FString GetNodeCategory() const override { return TEXT("SyCore|MessageBus"); }
+    virtual FString GetNodeCategory() const override { return TEXT("SyPlugin|MessageBus"); }
     
     // 节点描述
     virtual FString GetNodeDescription() const override PURE_VIRTUAL(GetNodeDescription, return TEXT(""););

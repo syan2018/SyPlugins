@@ -28,12 +28,8 @@ protected:
     FSyOperationTarget OperationTarget;
 
     /** The specific state tag within the target to modify. */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Operation", meta = (DisplayName = "Modifier State Tag"))
-    FGameplayTag ModifierStateTag;
-
-    /** The parameter data for the state modification. Use FInstancedStruct to select and configure specific USyStateMetadataBase types. */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Operation", meta = (DisplayName = "Modifier Parameter Data"))
-    FInstancedStruct ModifierParameterData;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State Operation", meta = (DisplayName = "Modifier"))
+    FSyStateParams OpModifier;
 
     // --- Execution Logic --- 
 
@@ -41,6 +37,11 @@ protected:
      * Derived classes must override this to provide the source of the operation.
      */
     virtual FSyOperationSource GetOperationSource() const PURE_VIRTUAL(USyFlowNode_StateOperationBase::GetOperationSource, return FSyOperationSource(););
+
+    /** 
+     * Derived classes must override this to provide the source of the operation.
+     */
+    virtual FSyOperationModifier GetOperationModifier() const;
 
     /** 
      * Executes the state operation by recording it with the StateManager.
@@ -55,6 +56,6 @@ public:
 #if WITH_EDITOR
     virtual FText GetNodeTitle() const override { return FText::FromString("State Op Base"); } 
     virtual FText GetNodeToolTip() const override;
-    virtual FString GetNodeCategory() const override { return TEXT("Sy/State Operations"); }
+    virtual FString GetNodeCategory() const override { return TEXT("SyPlugin|StateOp"); }
 #endif
 }; 

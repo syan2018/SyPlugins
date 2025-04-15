@@ -7,6 +7,20 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogSyFlowNodeStateOpBase, Log, All);
 
+FSyOperationModifier USyFlowNode_StateOperationBase::GetOperationModifier() const
+{
+    FSyOperationModifier Modifier;
+    if (OpModifier.Tag.IsValid())
+    {
+        Modifier.AddStateModifications(OpModifier);
+    }
+    else
+    {
+        UE_LOG(LogSyFlowNodeStateOpBase, Warning, TEXT("%s: Invalid Modifier StateTag or ParameterData, Modifier will be empty."), *GetNodeTitle().ToString());
+    }
+    return Modifier;
+}
+
 void USyFlowNode_StateOperationBase::ExecuteInput(const FName& PinName)
 {
     USyStateManagerSubsystem* StateManager = GetStateManagerSubsystem();
@@ -18,16 +32,8 @@ void USyFlowNode_StateOperationBase::ExecuteInput(const FName& PinName)
     }
 
     // Construct the Modifier
-    FSyOperationModifier Modifier;
-    if (ModifierStateTag.IsValid() && ModifierParameterData.IsValid())
-    {
-        Modifier.AddStateModification(ModifierStateTag, ModifierParameterData);
-    }
-    else
-    {
-        UE_LOG(LogSyFlowNodeStateOpBase, Warning, TEXT("%s: Invalid Modifier StateTag or ParameterData, Modifier will be empty."), *GetNodeTitle().ToString());
-    }
-
+    FSyOperationModifier Modifier = GetOperationModifier();
+    
     // Get the Source from the derived class
     FSyOperationSource Source = GetOperationSource();
 
