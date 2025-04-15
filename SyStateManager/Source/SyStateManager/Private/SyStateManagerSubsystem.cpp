@@ -18,14 +18,16 @@ void USyStateManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     Super::Initialize(Collection);
     UE_LOG(LogSyStateManager, Log, TEXT("SyStateManagerSubsystem Initialized."));
     // 在子系统初始化时尝试加载存档
-    LoadLog();
+    // TODO: 接入正常读档逻辑
+    // LoadLog();
 }
 
 void USyStateManagerSubsystem::Deinitialize()
 {
     UE_LOG(LogSyStateManager, Log, TEXT("SyStateManagerSubsystem Deinitializing. Saving log..."));
     // 在子系统反初始化前尝试保存日志（确保游戏退出时也能保存）
-    SaveLog();
+    // TODO: 接入正常读档逻辑
+    // SaveLog();
     ModificationLog.Empty();
     OnStateModificationRecorded.Clear();
     Super::Deinitialize();
