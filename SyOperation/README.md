@@ -9,21 +9,21 @@
 1.  **操作意图 (`FSyOperation`)**:
     *   核心结构体 `FSyOperation` 代表一个完整的状态变更意图。
     *   它由三部分组成：
-        *   `FSyOperationSource`: 定义操作的发起者或来源（例如：技能、交互、系统事件）。使用 `GameplayTag` (`SourceTypeTag`) 对来源类型进行分类，并可通过 `FSyInstancedStruct` (`Parameters`) 携带来源相关的参数。
-        *   `FSyOperationModifier`: 定义操作希望产生的具体状态修改效果。它内部包含一个 `FSyStateParameterSet` (来自 `SyStateCore` 模块)，用于存储一个或多个目标状态标签 (`StateTag`) 及其对应的参数 (`FSyInstancedStruct`)。
-        *   `FSyOperationTarget`: 定义操作的目标（例如：特定实体、区域、全局状态）。使用 `GameplayTag` (`TargetTypeTag`) 对目标类型进行分类，并可通过 `FSyInstancedStruct` (`Parameters`) 携带目标相关的参数。
+        *   `FSyOperationSource`: 定义操作的发起者或来源（例如：技能、交互、系统事件）。使用 `GameplayTag` (`SourceTypeTag`) 对来源类型进行分类，并可通过 `FInstancedStruct` (`Parameters`) 携带来源相关的参数。
+        *   `FSyOperationModifier`: 定义操作希望产生的具体状态修改效果。它内部包含一个 `FSyStateParameterSet` (来自 `SyStateCore` 模块)，用于存储一个或多个目标状态标签 (`StateTag`) 及其对应的参数 (`FInstancedStruct`)。
+        *   `FSyOperationTarget`: 定义操作的目标（例如：特定实体、区域、全局状态）。使用 `GameplayTag` (`TargetTypeTag`) 对目标类型进行分类，并可通过 `FInstancedStruct` (`Parameters`) 携带目标相关的参数。
 
 2.  **数据驱动配置**:
     *   **`GameplayTag`**: 广泛用于对 `Source`, `Target` 类型以及 `Modifier` 中的状态进行分类和识别。
-    *   **`FSyInstancedStruct` (来自 `SyCore`)**: 用于携带与特定 `GameplayTag` 关联的参数数据。这允许操作的细节（如伤害值、状态效果持续时间等）通过数据进行配置，而不是硬编码。
+    *   **`FInstancedStruct` **: 用于携带与特定 `GameplayTag` 关联的参数数据。这允许操作的细节（如伤害值、状态效果持续时间等）通过数据进行配置，而不是硬编码。
 
 3.  **状态修改集 (`FSyStateParameterSet` - 来自 `SyStateCore`)**:
-    *   `FSyOperationModifier` 使用 `FSyStateParameterSet` 来聚合本次操作想要应用的所有状态修改。每个修改由一个目标状态的 `GameplayTag` 和一个包含具体参数的 `FSyInstancedStruct` 组成。
+    *   `FSyOperationModifier` 使用 `FSyStateParameterSet` 来聚合本次操作想要应用的所有状态修改。每个修改由一个目标状态的 `GameplayTag` 和一个包含具体参数的 `FInstancedStruct` 组成。
 
 ## 主要特性
 
 1.  **标准化的操作意图定义**: 提供统一的数据结构来描述各种状态变更操作。
-2.  **数据驱动**: 操作的类型和参数可以通过 `GameplayTag` 和 `FSyInstancedStruct` 进行灵活配置。
+2.  **数据驱动**: 操作的类型和参数可以通过 `GameplayTag` 和 `FInstancedStruct` 进行灵活配置。
 3.  **编辑器增强**:
     *   提供 `FSyOperationDetailsCustomization`, 在虚幻编辑器中自定义 `FSyOperation` 的属性面板。
     *   当修改 `SourceTypeTag` 或 `TargetTypeTag` 时, 可以自动更新对应的 `Parameters` 结构体类型（需要配合 `TagMetadata` 配置）。
@@ -76,12 +76,12 @@ MyOperation.Source = FSyOperationSource(SourceTag);
 FGameplayTag BurningStateTag = FGameplayTag::RequestGameplayTag(\"State.Debuff.Burning\");
 // (假设燃烧状态需要参数 FBurningParams)
 // FBurningParams BurningParams(10.0f, 5.0f); // 假设定义了燃烧参数结构体
-// FSyInstancedStruct BurningParamsStruct;
+// FInstancedStruct BurningParamsStruct;
 // BurningParamsStruct.InitializeAs<FBurningParams>(BurningParams); // 用具体参数初始化
 FSyStateParameterSet ModifierParams;
 // ModifierParams.AddStateParam(BurningStateTag, BurningParamsStruct);
 // 如果没有参数，可以这样添加:
-ModifierParams.AddStateParam(BurningStateTag, FSyInstancedStruct());
+ModifierParams.AddStateParam(BurningStateTag, FInstancedStruct());
 
 
 MyOperation.Modifier = FSyOperationModifier(ModifierParams);
@@ -90,7 +90,7 @@ MyOperation.Modifier = FSyOperationModifier(ModifierParams);
 FGameplayTag TargetTag = FGameplayTag::RequestGameplayTag(\"Target.EntityType.Character\");
 // (假设目标需要一个实体ID参数 FTargetEntityParams)
 // FTargetEntityParams TargetParams(EnemyActor->GetUniqueID()); // 假设定义了目标参数
-// FSyInstancedStruct TargetParamsStruct(TargetParams);
+// FInstancedStruct TargetParamsStruct(TargetParams);
 // MyOperation.Target = FSyOperationTarget(TargetTag, TargetParamsStruct);
 // 如果目标类型本身足够，或参数在其他地方处理:
 MyOperation.Target = FSyOperationTarget(TargetTag);
@@ -123,7 +123,7 @@ struct FMyCustomSourceParams
 // FMyCustomSourceParams MyParams;
 // MyParams.PowerLevel = 10.f;
 // MyParams.SourceName = TEXT(\"MegaBlast\");
-// FSyInstancedStruct ParamsStruct;
+// FInstancedStruct ParamsStruct;
 // ParamsStruct.InitializeAs<FMyCustomSourceParams>(MyParams);
 // MyOperation.Source = FSyOperationSource(SourceTag, ParamsStruct);
 
@@ -151,11 +151,11 @@ struct FMyCustomSourceParams
 1.  参数结构体的修改（添加/删除/重命名属性）可能会影响已保存的 `FSyOperation` 数据。
 2.  编辑器相关的代码（如 `FSyOperationDetailsCustomization`）仅在编辑器构建中有效。
 3.  如果参数需要在网络间同步或保存到磁盘，请确保结构体及其包含的类型支持序列化。
-4.  `FSyInstancedStruct` 的使用需要确保其内部结构体指针在需要时是有效的。
+4.  `FInstancedStruct` 的使用需要确保其内部结构体指针在需要时是有效的。
 
 ## 依赖关系
 
-*   **`SyCore`**: 提供 `FSyInstancedStruct` 等基础工具和概念。
+*   **`SyCore`**: 提供基础工具和概念。
 *   **`SyStateCore`**: 提供 `FSyStateParameterSet` 用于定义状态修改，以及可能的状态标签 (`StateTag`) 概念。
 *   **`GameplayTags`**: Unreal Engine 模块，提供核心的标签系统。
 *   **`StructUtils`**: Unreal Engine 模块，`FInstancedStruct` 的基础。

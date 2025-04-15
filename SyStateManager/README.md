@@ -43,7 +43,7 @@
 
 *   **`Core`, `CoreUObject`, `Engine`**: Unreal Engine 核心模块。
 *   **`GameplayTags`**: 用于 `FSyOperation` 中的标签定义和 `GetAggregatedModifications` 的筛选参数。
-*   **`SyCore`**: 可能的基础类型或工具 (例如 `FSyInstancedStruct` 间接依赖)。
+*   **`SyCore`**: 可能的基础类型或工具。
 *   **`SyOperation`**: 定义了核心数据结构 `FSyOperation`。
 *   **`SyStateCore`**: 定义了 `FSyStateParameterSet`，用于 `GetAggregatedModifications` 的返回值和 `FSyOperationModifier` 内部。
 

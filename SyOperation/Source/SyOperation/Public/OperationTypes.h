@@ -33,9 +33,21 @@ struct SYOPERATION_API FSyOperationSource
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Source")
     FGameplayTag SourceTypeTag;
 
-    /** 来源参数 */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Source")
+    /** 可选的来源实体ID */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Source", meta = (DisplayName = "Optional Source Entity ID"))
+    FGuid SourceEntityId; // 使用 FGuid 而不是 TOptional<FGuid> 以简化序列化和蓝图暴露
+
+    /** 可选的来源别名 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Source", meta = (DisplayName = "Optional Source Alias"))
+    FName SourceAlias; // 使用 FName 而不是 TOptional<FName>
+
+    /** 额外的来源参数 (用于复杂情况或非标识别) */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Source", meta = (DisplayName = "Additional Source Parameters"))
     FInstancedStruct Parameters;
+
+    // 辅助函数，检查是否有有效的ID或Alias
+    bool HasValidId() const { return SourceEntityId.IsValid(); }
+    bool HasValidAlias() const { return SourceAlias != NAME_None; }
 };
 
 
@@ -64,9 +76,21 @@ struct SYOPERATION_API FSyOperationTarget
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Target")
     FGameplayTag TargetTypeTag;
 
-    /** 目标参数 */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Target")
+    /** 可选的目标实体ID */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Target", meta = (DisplayName = "Optional Target Entity ID"))
+    FGuid TargetEntityId;
+
+    /** 可选的目标别名 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Target", meta = (DisplayName = "Optional Target Alias"))
+    FName TargetAlias;
+
+    /** 额外的目标参数 (用于复杂情况或非标识别) */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Target", meta = (DisplayName = "Additional Target Parameters"))
     FInstancedStruct Parameters;
+
+    // 辅助函数，检查是否有有效的ID或Alias
+    bool HasValidId() const { return TargetEntityId.IsValid(); }
+    bool HasValidAlias() const { return TargetAlias != NAME_None; }
     
 };
 

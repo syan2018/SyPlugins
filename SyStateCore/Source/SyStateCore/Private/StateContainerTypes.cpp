@@ -4,7 +4,6 @@
 #include "StateParameterTypes.h" // Include the parameters header
 #include "StateMetadataTypes.h" // Include metadata header for USyStateMetadataBase
 #include "DS_TagMetadata.h" // Include for UDS_TagMetadata
-#include "SyCore/Public/Foundation/Utilities/SyInstancedStruct.h" // Include for FSyInstancedStruct
 
 // Implementation for FSyStateCategories::ApplyInitData
 void FSyStateCategories::ApplyInitData(const FSyStateParameterSet& InitData)

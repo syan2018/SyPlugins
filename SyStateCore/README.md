@@ -16,13 +16,13 @@
 *   **`FSyStateCategories`:** 包含 `TMap<FGameplayTag, FSyStateMetadatas>`，用于存储实体运行时状态对象实例。提供了查找、添加、移除状态元数据以及批量应用初始化和修改的方法。
 *   **`FSyStateMetadatas`:** 包含 `TArray<TObjectPtr<UO_TagMetadata>>`，用于存储特定状态标签的多个元数据对象实例。
 *   **`FSyStateParameterSet`:** 包含 `TMap<FGameplayTag, FSyStateParams>`，用于在编辑器或蓝图中配置实体初始状态或运行时修改的参数。
-*   **`FSyStateParams`:** 包含 `TArray<FSyInstancedStruct>`，用于存储对特定状态标签的多个参数（使用 `SyCore` 中的 `FSyInstancedStruct`）。
+*   **`FSyStateParams`:** 包含 `TArray<FInstancedStruct>`，用于存储对特定状态标签的多个参数。
 *   **`USyStateMetadataBase`:** 所有状态元数据的基类，继承自 `UO_TagMetadata`，提供状态标签、参数处理（通过 `FInstancedStruct`）和值访问的基本功能。每个子类应实现 `GetValueDataType` 以标识其管理的具体数据类型（`USTRUCT`）。
 *   **`USyTagStateMetadata`:** 用于存储 `FGameplayTag` 类型状态值的 `USyStateMetadataBase` 具体实现。
 
 ## Dependencies
 
-*   `SyCore` (用于 `FSyInstancedStruct`)
+*   `SyCore` 
 *   `CoreUObject`
 *   `GameplayTags`
 *   `TagMetadata` (用于 `UO_TagMetadata`)
