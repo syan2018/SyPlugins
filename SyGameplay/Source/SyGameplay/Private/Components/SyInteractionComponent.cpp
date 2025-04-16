@@ -18,7 +18,10 @@ void USyInteractionComponent::BeginPlay()
     Super::BeginPlay();
 
     // 查找并缓存StateComponent
-    FindAndCacheStateComponent();
+    FindAndCacheComponent();
+
+    // 处理本地交互逻辑
+    OnUsed.AddDynamic(this, &USyInteractionComponent::HandleInteractionRequest);
 
     // 如果找到StateComponent，绑定状态变化事件
     if (StateComponent)
@@ -44,7 +47,7 @@ void USyInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
     Super::EndPlay(EndPlayReason);
 }
 
-void USyInteractionComponent::FindAndCacheStateComponent()
+void USyInteractionComponent::FindAndCacheComponent()
 {
     if (!GetOwner())
     {
@@ -56,6 +59,13 @@ void USyInteractionComponent::FindAndCacheStateComponent()
     if (!StateComponent)
     {
         UE_LOG(LogSyInteraction, Warning, TEXT("%s: Could not find StateComponent on owner actor."), *GetNameSafe(GetOwner()));
+    }
+
+    // 查找EntityComponent
+    EntityComponent = GetOwner()->FindComponentByClass<USyEntityComponent>();
+    if (!EntityComponent)
+    {
+        UE_LOG(LogSyInteraction, Warning, TEXT("%s: Could not find EntityComponent on owner actor."), *GetNameSafe(GetOwner()));
     }
 }
 
@@ -101,4 +111,18 @@ void USyInteractionComponent::HandleStateChanged()
         Disable();
         UE_LOG(LogSyInteraction, Verbose, TEXT("%s: Interaction disabled due to missing State.Interactable tag."), *GetNameSafe(GetOwner()));
     }
+}
+
+
+void USyInteractionComponent::HandleInteractionRequest()
+{
+    UE_LOG(LogSyInteraction, Verbose, TEXT("%s: Interaction requested."), *GetNameSafe(GetOwner()));
+
+    EntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction")));
+    EntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.Start")));
+    
+    // 待补完完整交互逻辑 
+
+    // TODO: 照理说会放在通用功能执行脚本的完成回调里，后续进行设计 
+    EntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
 }

@@ -32,10 +32,22 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<class USyStateComponent> StateComponent;
 
+    /** 缓存关联的EntityComponent指针 */
+    UPROPERTY(Transient)
+    TObjectPtr<class USyEntityComponent> EntityComponent;
+
+    /** 查找并缓存关联SyComponent */
+    void FindAndCacheComponent();
+
     /** 处理状态变化 */
     UFUNCTION()
     void HandleStateChanged();
 
-    /** 查找并缓存StateComponent */
-    void FindAndCacheStateComponent();
+    /** 处理交互请求
+     *  通常在监听UInteractionComponent的OnUsed事件时调用
+     *  避免将过多逻辑放到Flow回调中，算是我的设计哲学
+     *  实际使用中，通常会读取其它交互状态参数并决定执行流程
+     */
+    UFUNCTION()
+    void HandleInteractionRequest();
 }; 
