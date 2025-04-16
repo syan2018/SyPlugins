@@ -6,7 +6,7 @@
 #include "Math/Vector.h"
 #include "Math/Rotator.h"
 #include "Math/Transform.h"
-#include "Foundation/Utilities/SyInstancedStruct.h"
+#include "Foundation/SyInstancedStruct.h"
 #include "BasicMetadataValueTypes.generated.h"
 
 // --- USTRUCT Wrappers for Basic Types ---
