@@ -53,7 +53,7 @@ class SYGAMEPLAY_API USpawnComponent : public UArrowComponent
 {
 	GENERATED_UCLASS_BODY()
 
-private:
+protected:
 	TWeakObjectPtr<AActor> SpawnedActor;
 	FStreamableManager StreamableManager;
 	

@@ -26,6 +26,9 @@ public class SyGameplay : ModuleRules
 			new string[]
 			{
 				"Core",
+				"SyCore",
+				"SyEntity", 
+				"SyStateCore",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -38,9 +41,8 @@ public class SyGameplay : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				"SyCore",
-				"SyEntity", 
 				"AIModule",
+				"GameplayTags",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
