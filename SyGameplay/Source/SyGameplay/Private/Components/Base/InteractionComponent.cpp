@@ -7,6 +7,10 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/World.h"
 
+/**	当前通过自主Tick检测PlayerEnter，并基于此向InteractionManager更新自身存在
+ *	TODO: 更新为基于玩家组件自主扫描Tick，自身维护ConditionMet 
+ *	在条件满足时，由玩家组件提交予InteractionManager
+ */
 FPlayerInInteractionEvent UInteractionComponent::OnPlayerEnter;
 FPlayerInInteractionEvent UInteractionComponent::OnPlayerExit;
 
@@ -40,7 +44,6 @@ void UInteractionComponent::Enable()
 	{
 		bEnabled = true;
 
-		CameraManager = PlayerController->PlayerCameraManager;
 		PrimaryComponentTick.SetTickFunctionEnable(true);
 	}
 }
@@ -56,21 +59,25 @@ void UInteractionComponent::Disable()
 	bEnabled = false;
 
 	PrimaryComponentTick.SetTickFunctionEnable(false);
-	CameraManager = nullptr;
+}
+
+bool UInteractionComponent::CheckConditionMet() const
+{
+	bool bConditionsMet = false;
+	if (const APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
+	{
+		const FVector DistanceToActor = GetComponentLocation() - PlayerController->GetPawn()->GetActorLocation();
+		bConditionsMet = DistanceToActor.Size() < Distance;
+		
+	}
+	return bConditionsMet;
 }
 
 void UInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	bool bConditionsMet = false;
-	if (CameraManager.IsValid())
-	{
-		const FVector DistanceToCamera = GetComponentLocation() - CameraManager->GetCameraLocation();
-		bConditionsMet = DistanceToCamera.Size() < Distance;
-	}
-
-	if (bConditionsMet)
+	if (bool bConditionsMet = CheckConditionMet())
 	{
 		if (!bCanInteract)
 		{

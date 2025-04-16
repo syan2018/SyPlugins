@@ -43,6 +43,7 @@ public class SyGameplay : ModuleRules
 				"SlateCore",
 				"AIModule",
 				"GameplayTags",
+				"UMG",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

@@ -23,18 +23,16 @@ class SYGAMEPLAY_API UInteractionComponent : public UArrowComponent
 
 	static FPlayerInInteractionEvent OnPlayerEnter;
 	static FPlayerInInteractionEvent OnPlayerExit;
-	
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
-	bool bEnabled;
 
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
+	bool bEnabled;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction", meta = (ClampMin = 50.0f))
 	float Distance;
 
 private:
 	bool bCanInteract;
-	TWeakObjectPtr<APlayerCameraManager> CameraManager;
 	
 public:
 	virtual void BeginPlay() override;
@@ -44,6 +42,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void Disable();
+
+	bool CheckConditionMet() const;
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
