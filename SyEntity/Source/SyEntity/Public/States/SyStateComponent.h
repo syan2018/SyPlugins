@@ -4,8 +4,9 @@
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
 #include "SyStateCore.h" 
-#include "Components/SyEntityComponent.h"
+#include "SyEntityComponent.h"
 #include "SyStateManager/Public/StateModificationRecord.h" // 包含 FSyStateModificationRecord
+#include "SyCore/Public/Components/ISyComponentInterface.h"
 #include "SyStateComponent.generated.h"
 
 // 前向声明
@@ -23,12 +24,15 @@ struct FSyStateParameterSet;
  * 6. 触发本地状态数据变更事件 (TODO)。
  */
 UCLASS(ClassGroup=(SyEntity), meta=(BlueprintSpawnableComponent))
-class SYENTITY_API USyStateComponent : public UActorComponent
+class SYENTITY_API USyStateComponent : public UActorComponent, public ISyComponentInterface
 {
     GENERATED_BODY()
 
 public:
     USyStateComponent();
+
+    // 实现ISyComponentInterface接口
+    virtual FName GetComponentType() const override { return TEXT("State"); }
 
     // --- 状态访问 ---
     /**

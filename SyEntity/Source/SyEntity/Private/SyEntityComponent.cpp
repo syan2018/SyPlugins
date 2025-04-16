@@ -1,4 +1,4 @@
-#include "Components/SyEntityComponent.h"
+#include "SyEntityComponent.h"
 #include "SyCore/Public/Identity/SyIdentityComponent.h"
 #include "SyCore/Public/Messaging/SyMessageComponent.h"
 #include "Registry/SyEntityRegistry.h"
@@ -63,24 +63,6 @@ void USyEntityComponent::InitializeEntity(bool bForceReinitialization)
     EnsureDependentComponents();
     
     
-    // 查找并收集Owner Actor上所有其他标记为Sy*的组件
-    AActor* Owner = GetOwner();
-    if (Owner)
-    {
-        // 使用GetComponentsByClass获取所有组件，然后转换为数组
-        TArray<UActorComponent*> Components;
-        Owner->GetComponents(Components);
-        
-        for (UActorComponent* Comp : Components)
-        {
-            // 检查组件名称是否以"Sy"开头
-            if (Comp != this && Comp->GetName().StartsWith(TEXT("Sy")))
-            {
-                ManagedSyComponents.AddUnique(Comp);
-            }
-        }
-    }
-    
     // 绑定组件委托
     BindComponentDelegates();
     
@@ -110,8 +92,8 @@ void USyEntityComponent::EnsureDependentComponents()
     {
         return;
     }
-    
-    // 确保MessageComponent存在
+
+    // 1. 确保MessageComponent存在
     if (!MessageComponent)
     {
         MessageComponent = Owner->FindComponentByClass<USyMessageComponent>();
@@ -122,15 +104,33 @@ void USyEntityComponent::EnsureDependentComponents()
             ManagedSyComponents.Add(MessageComponent);
         }
     }
-    // 创建并添加StateComponent
+
+    // 2. 确保StateComponent存在
     if (!StateComponent)
     {
         StateComponent = Owner->FindComponentByClass<USyStateComponent>();
-        if (!MessageComponent)
+        if (!StateComponent)
         {
             StateComponent = NewObject<USyStateComponent>(Owner, USyStateComponent::StaticClass());
             StateComponent->RegisterComponent();
             ManagedSyComponents.Add(StateComponent);
+        }
+    }
+
+    // 3. 收集其他Sy系列组件
+    TArray<UActorComponent*> Components;
+    Owner->GetComponents(Components);
+    
+    for (UActorComponent* Comp : Components)
+    {
+        // 使用接口判断是否是Sy系列组件，且不是已管理的必要组件
+        if (Comp != this && 
+            Comp != IdentityComponent && 
+            Comp != MessageComponent && 
+            Comp != StateComponent &&
+            Comp->GetClass()->ImplementsInterface(USyComponentInterface::StaticClass()))
+        {
+            ManagedSyComponents.AddUnique(Comp);
         }
     }
 }

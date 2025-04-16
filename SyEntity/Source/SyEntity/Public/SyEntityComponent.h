@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
+#include "SyCore/Public/Components/ISyComponentInterface.h"
 #include "SyEntityComponent.generated.h"
 
 // 前向声明
@@ -19,12 +20,15 @@ class USyStateComponent;
  * 4. 实现组件间通信机制
  */
 UCLASS(Blueprintable, ClassGroup=(SyEntity), meta=(BlueprintSpawnableComponent))
-class SYENTITY_API USyEntityComponent : public UActorComponent
+class SYENTITY_API USyEntityComponent : public UActorComponent, public ISyComponentInterface
 {
     GENERATED_BODY()
 
 public:
     USyEntityComponent();
+
+    // 实现ISyComponentInterface接口
+    virtual FName GetComponentType() const override { return TEXT("Entity"); }
 
     // --- 生命周期与初始化 ---
 protected:

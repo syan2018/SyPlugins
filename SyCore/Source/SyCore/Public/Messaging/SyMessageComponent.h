@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "Identity/SyIdentityComponent.h"
 #include "SyMessageTypes.h"
+#include "Components/ISyComponentInterface.h"
 #include "SyMessageComponent.generated.h"
 
 /**
@@ -13,12 +14,15 @@
  * 3. 不处理消息接收逻辑
  */
 UCLASS(Blueprintable, ClassGroup=(SyCore), meta=(BlueprintSpawnableComponent))
-class SYCORE_API USyMessageComponent : public UActorComponent
+class SYCORE_API USyMessageComponent : public UActorComponent, public ISyComponentInterface
 {
     GENERATED_BODY()
 
 public:
     USyMessageComponent();
+
+    // 实现ISyComponentInterface接口
+    virtual FName GetComponentType() const override { return TEXT("Message"); }
 
     // 发送消息接口（带Metadata）
     UFUNCTION(BlueprintCallable, Category = "SyMessage")

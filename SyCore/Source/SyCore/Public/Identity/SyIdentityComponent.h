@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
+#include "Components/ISyComponentInterface.h"
 #include "SyIdentityComponent.generated.h"
 
 /**
@@ -13,12 +14,15 @@
  * 3. 可选别名 - 可在蓝图或场景中配置
  */
 UCLASS(Blueprintable, ClassGroup=(SyCore), meta=(BlueprintSpawnableComponent))
-class SYCORE_API USyIdentityComponent : public UActorComponent
+class SYCORE_API USyIdentityComponent : public UActorComponent, public ISyComponentInterface
 {
     GENERATED_BODY()
 
 public:
     USyIdentityComponent();
+
+    // 实现ISyComponentInterface接口
+    virtual FName GetComponentType() const override { return TEXT("Identity"); }
 
     // 基础查询接口
     UFUNCTION(BlueprintPure, Category = "SyIdentity")

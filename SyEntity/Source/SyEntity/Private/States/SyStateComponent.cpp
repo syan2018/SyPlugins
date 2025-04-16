@@ -2,7 +2,7 @@
 
 #include "States/SyStateComponent.h"
 #include "SyStateManager/Public/SyStateManagerSubsystem.h" // 包含 StateManager 子系统
-#include "Components/SyEntityComponent.h"
+#include "SyEntityComponent.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Logging/LogMacros.h"

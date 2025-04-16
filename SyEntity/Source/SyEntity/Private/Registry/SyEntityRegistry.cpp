@@ -1,5 +1,5 @@
 #include "Registry/SyEntityRegistry.h"
-#include "Components/SyEntityComponent.h"
+#include "SyEntityComponent.h"
 #include "SyCore/Public/Identity/SyIdentityComponent.h"
 
 void USyEntityRegistry::RegisterEntity(USyEntityComponent* EntityComponent)
