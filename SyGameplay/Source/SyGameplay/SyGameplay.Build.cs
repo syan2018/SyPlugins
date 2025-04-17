@@ -29,6 +29,9 @@ public class SyGameplay : ModuleRules
 				"SyCore",
 				"SyEntity", 
 				"SyStateCore",
+				"AIModule",
+				"GameplayTags",
+				"UMG",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -41,9 +44,6 @@ public class SyGameplay : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				"AIModule",
-				"GameplayTags",
-				"UMG",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
