@@ -123,6 +123,8 @@ void FSyStateCategories::ApplyStateModifications(const TMap<FGameplayTag, TArray
             if (!TargetInstance) continue;
 
             // Apply modifications - let the instance decide if a param applies
+            // TODO: 当前为顺序更新，后置记录覆盖前置记录
+            // 理想情况下应当确保唯一性，相关逻辑当在StateManager获取时处理
             for (const FInstancedStruct& ModParam : ModificationParams)
             {
                 // ApplyModification should internally check if ModParam type is relevant

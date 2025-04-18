@@ -9,6 +9,7 @@
 #include "SyStateManagerSaveGame.h" // 包含自定义 SaveGame 类
 #include "Kismet/GameplayStatics.h" // 包含 GameplayStatics
 #include "StructUtils/InstancedStruct.h"
+#include "Metadatas/ListMetadataValueTypes.h" // *** 包含新的列表基类头文件 ***
 
 // 定义一个简单的日志分类
 DEFINE_LOG_CATEGORY_STATIC(LogSyStateManager, Log, All); // 启用日志以方便调试
@@ -75,6 +76,8 @@ FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const 
         // --- 聚合阶段 ---
         // 将当前记录的 Modifier 参数合并到临时 Map 中
         // 后出现的记录会覆盖或合并先出现的记录中相同 StateTag 的条目
+        // TODO: 处理冲突逻辑，相同来源覆盖、不同来源互斥
+        // 不过在这里处理，异步会不会爆炸啊，最好在Record时就？最好套个TryGet方法检查冲突
         for (const auto& Pair : Record.Operation.Modifier.StateModifications.GetParametersAsMap())
         {
             const FGameplayTag& StateTag = Pair.Key;
@@ -82,12 +85,63 @@ FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const 
 
             // 查找临时 Map 中是否已有该 StateTag 的条目
             TArray<FInstancedStruct>& ExistingParams = AggregatedParamsMap.FindOrAdd(StateTag);
-            
-            // 合并参数：这里简单地追加。如果需要覆盖或更复杂的逻辑，在此修改。
-            // 或者，如果 FSyStateParams 提供了合并方法，则调用该方法。
-            // 注意：直接覆盖可能更符合"后操作覆盖前操作"的语义
-            // ExistingParams = ParamsToMerge; // 直接覆盖
-            ExistingParams.Append(ParamsToMerge); // 追加
+
+            // 遍历当前记录中该 StateTag 下的所有待合并参数
+            for (const FInstancedStruct& SourceStruct : ParamsToMerge)
+            {
+                if (!SourceStruct.IsValid()) continue; // 跳过无效的源结构体
+
+                const UScriptStruct* StructType = SourceStruct.GetScriptStruct();
+                if (!StructType) continue; // 跳过没有 ScriptStruct 的情况
+
+                // 尝试在 ExistingParams 中查找具有相同类型的结构体
+                FInstancedStruct* TargetStructPtr = ExistingParams.FindByPredicate(
+                    [&StructType](const FInstancedStruct& ExistingStruct)
+                    {
+                        return ExistingStruct.IsValid() && ExistingStruct.GetScriptStruct() == StructType;
+                    });
+
+                // 如果找到了相同类型的参数
+                if (TargetStructPtr)
+                {
+                    const UScriptStruct* ListBaseType = FSyListParameterBase::StaticStruct(); // 获取列表基类类型
+
+                    // --- 检查是否为列表类型并应用列表聚合逻辑 ---
+                    if (StructType && StructType->IsChildOf(ListBaseType))
+                    {
+                        UE_LOG(LogSyStateManager, Verbose, TEXT("Aggregating list type %s using append logic."), *StructType->GetName());
+
+                        // 获取目标和源的可变/常量指针
+                        // 注意：使用 GetMutablePtr/GetPtr 而不是 GetMutableValue/GetValue，因为我们操作的是结构体本身（访问其 ListItems 成员）
+                        FSyListParameterBase* TargetListBase = TargetStructPtr->GetMutablePtr<FSyListParameterBase>();
+                        const FSyListParameterBase* SourceListBase = SourceStruct.GetPtr<FSyListParameterBase>();
+
+                        if (TargetListBase && SourceListBase && TargetListBase->ScriptStruct == SourceListBase->ScriptStruct)
+                        {
+                            TargetListBase->ListItems.Append(SourceListBase->ListItems);
+                        }
+                        else
+                        {
+                            // 如果类型转换失败（理论上不应发生，因为 IsChildOf 检查通过了），记录警告并回退到覆盖
+                            UE_LOG(LogSyStateManager, Warning, TEXT("Failed to cast to FSyListParameterBase for aggregation despite IsChildOf check for type: %s. Falling back to overwrite."), *StructType->GetName());
+                            *TargetStructPtr = SourceStruct;
+                        }
+                    }
+                    // --- （可选）处理其他需要特殊聚合的非列表类型 ---
+                    // --- 默认行为：对于非列表且无特殊规则的类型，直接覆盖 ---
+                    else
+                    {
+                        UE_LOG(LogSyStateManager, Verbose, TEXT("Aggregating non-list type %s using default behavior (overwrite)."), *StructType->GetName());
+                        *TargetStructPtr = SourceStruct;
+                    }
+                }
+                // 如果没有找到相同类型的参数
+                else
+                {
+                    // 直接将新的参数添加到 ExistingParams 数组中
+                    ExistingParams.Add(SourceStruct);
+                }
+            }
         }
     }
     
