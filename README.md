@@ -1,42 +1,40 @@
-# SyPlugins - Unreal Engine 模块化插件系统
+# SyPlugins - Unreal Engine 模块化事件与状态管理系统
+
+README in Other Language：
+
+<p align="left">
+  <a href="./README_EN.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
+</p>
 
 ## 项目概述
 SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于构建一个以状态驱动为核心思想的游戏框架。系统辅以消息驱动和模块化设计，实现灵活且易扩展的游戏实体基础功能。
 
+
+### 项目依赖
+
+- [ModularityPractice](https://github.com/Variann/ModularityPractice) 项目运转部分依赖 Variann 的 ModularityPractice，感谢 TagMetadata 为本项目的信息和状态管理提供核心思路
+   - **TagMetadata**：将Tag与任意类型元数据关联绑定的插件
+   - **FlowExtension**：简单实现、易于拓展的任务/对话系统，本项目中 SyPluginsImpl 提供的示例很大程度上拷贝于 ModularityPractice 对 FlowExtension 的原始实现
+   - **TagFacts**：基于Tag和Int储存全局变量的插件，项目预期基于 TagFacts 扩充任务系统实现，支持游戏流程状态信息储存
+   - 项目中其它轮子也相当值得学习！强烈推荐
+- [FlowGraph](https://github.com/MothCocoon/FlowGraph) 系统运转编辑器实现依赖，非常易用的 Unreal Gameplay 流程管理框架
+
+
 ## 核心理念
-- **状态驱动**: 基于 StateManager 统一管理游戏对象状态及其转换
-- **消息驱动**: 使用 MessageBus 实现统一的交互和玩家行为感知（并通过Flow或其它插件进行流程管理）
-- **组件化**: 采用组件式设计，提高代码复用性
+- **状态驱动**: 基于"操作记录"统一管理游戏对象全局状态及其转换
+- **消息驱动**: 使用消息总线实现交互和玩家行为感知（并通过Flow或其它插件进行流程管理）
+- **组件化**: 使用组件标识Actor实体，**非侵入引入任何项目**；支持拓展实体组件，快捷向消息和状态系统接入既有逻辑
 
 ## 系统架构
 
-搭建该系统用于简要实现下述逻辑链条
+系统简要实现下述逻辑链条
 
-```mermaid
-flowchart TD
-    %% 主要组件
-    InteractComp["InteractComp 交互组件"] --> MessageComp["MessageComp 消息传递"]
-    MessageComp --> MessageBus["MessageBus 总线转发"]
-    MessageBus -.-> FactManager["FactManager 事实管理"]
-    
-    %% 实体和状态管理
-    Entity["Entity 游戏对象"] --> Identifier["Identifier 实体标识"]
-    Identifier -.-> MessageComp
-    StateManager["StateMgr 状态管理器"] --> Entity
-    
-    %% 触发系统
-    MessageBus --> TriggerSys["TriggerSys 条件更新"]
-    FactManager --> TriggerSys
-    
-    %% 任务系统
-    TriggerSys --> QuestSys["QuestSys 状态更新"]
-    QuestSys --> QuestAction["QuestAction 任务行为"]
-    QuestAction --> StateManager
-    
-    %% 额外关系和获取状态流
-    InteractComp -- "根据状态激活交互" --> Entity
-    StateManager -. "基于标识索引实体" .-> Identifier
-```
+![Overview](Docs/Images/Overview.png)
+
+
+## 使用参考
+
+（待更新）
 
 
 ## 插件层级
@@ -88,39 +86,43 @@ flowchart TD
    - 提供具体功能实现参考
    - 展示模块间的集成方式
 
-8. **SyQuest**（计划中）
-   - 任务系统实现
-   - 基于状态和条件驱动的任务更新
-   - 依赖于SyCore和SyEntity模块
-   - 提供任务逻辑和状态管理
-
-9. **SyGameplay**（计划中）
-   - 游戏玩法框架
-   - 构建在SyEntity之上的具体游戏系统
+8. **SyGameplay**
+   - 基础Gameplay玩法框架
+   - 构建在SyEntity之上的具体游戏交互系统
    - 提供实体交互等高层功能
-   - 实现具体的游戏机制
+   - 当前简单实现触发器、通用交互等
 
-## 关键特性
-- **状态管理系统**: 统一的状态转换和管理机制
-- **消息总线**: 灵活的模块间通信
-- **实体与组件**: 可扩展的游戏对象架构
-- **任务系统**: 条件驱动的任务更新机制
+9. **SyQuest**（计划中）
+   - 任务系统实现（迭代当前FlowExtension实现）
+   - 基于状态、触发和监听实现统一任务更新
+   - 提供任务逻辑和状态管理
+   - 包括对TagFacts系统的导入和重构
 
-## 技术规范
+各模块详细介绍详见模块下 README.md 项目结构可能存在拆的太细之嫌，还请见谅
 
-### 命名约定
-- 类前缀: `Sy`
-- 接口前缀: `ISy`
-- 枚举前缀: `ESy`
-- 结构体前缀: `FSy`
 
-### 开发规范
-- 遵循 Unreal Engine 编码标准
-- 使用 UPROPERTY 和 UFUNCTION 确保反射
-- 所有公共 API 必须有完整文档
-- 关键功能需要单元测试覆盖
+## TODO
 
-## 模块依赖
-- 严格遵循依赖方向：Quest → Gameplay/Entity → Core
-- 通过接口和消息总线实现模块间通信
-- 避免循环依赖
+（待整理）
+
+
+## 项目由来
+
+（碎碎念）
+
+
+
+项目思路源自在前司为单机设计，但因空降乐子未能妥善落实的框架 [[记录]设计一套通用的游戏事件底层 – 再见，避风港！](http://blog.cyasylum.top/index.php/2024/03/31/%e8%ae%b0%e5%bd%95%e8%ae%be%e8%ae%a1%e4%b8%80%e5%a5%97%e9%80%9a%e7%94%a8%e7%9a%84%e6%b8%b8%e6%88%8f%e4%ba%8b%e4%bb%b6%e5%ba%95%e5%b1%82/)最初的核心思路为 **分层逻辑管理** 与 **消息总线**。
+
+1. 在游戏层面上，为流程逻辑和对象逻辑进行层级拆分
+2. 层级之间构建清晰的消息传递链路，基于实体身份标识进行通信
+
+而在近一年为在线游戏设计任务系统，积累了失败的工作经验，进一步引入了 **实体与组件化**、**状态管理** 以及一定程度上的前后端分离设计支持。
+
+1. 基于实体标识游戏对象
+2. 基于逻辑组件，为不同状态实现逻辑呈现
+3. 对实体状态的全局管理追求有源、生命周期、冲突管理等
+4. （待实现）逻辑的前后端分层与维护
+
+汇总后对游戏任务和关卡底层的设计思路逐渐清晰，恰逢朋友做demo投米，遂协助搭一轮子添把柴。再加之近期辞职搞 AI 创业，搭着 Cursor 把这玩意儿写出来，拾一下 Vibe Coding 工程习惯，顺便给 TD 生涯留条退路，岂不美哉。
+
