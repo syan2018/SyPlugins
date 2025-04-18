@@ -17,7 +17,7 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
    - **FlowExtension**：简单实现、易于拓展的任务/对话系统，本项目中 SyPluginsImpl 提供的示例很大程度上拷贝于 ModularityPractice 对 FlowExtension 的原始实现
    - **TagFacts**：基于Tag和Int储存全局变量的插件，项目预期基于 TagFacts 扩充任务系统实现，支持游戏流程状态信息储存
    - 项目中其它轮子也相当值得学习！强烈推荐
-- [FlowGraph](https://github.com/MothCocoon/FlowGraph) 系统运转编辑器实现依赖，非常易用的 Unreal Gameplay 流程管理框架
+- [FlowGraph](https://github.com/MothCocoon/FlowGraph) 插件系统运转的编辑实现依赖，非常易用的 Unreal Gameplay 流程管理框架
 
 
 ## 核心理念
@@ -46,11 +46,10 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
    - 作为所有其他SyPlugins模块的基础依赖
 
 2. **SyStateCore**
-   - 状态系统的核心定义模块
-   - 定义实体状态的数据结构（FSyEntityState）
-   - 提供状态初始化配置（FSyEntityInitData）
+   - 状态系统的核心数据定义
+   - 定义实体状态的数据结构（FSyStateCategories）
+   - 提供状态编辑器配置支持（FSyStateParameterSet）
    - 定义各种状态元数据类（拓展UO_TagMetadata）
-   - 提供状态数据的访问接口
 
 3. **SyStateManager**
    - 状态管理的中心化模块
