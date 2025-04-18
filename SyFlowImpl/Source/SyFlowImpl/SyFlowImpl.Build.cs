@@ -32,7 +32,8 @@ public class SyFlowImpl : ModuleRules
 				"SyOperation",     // Added for FSyOperation types
 				"SyStateCore",
 				"SyStateManager",  // Added for StateManager interaction
-				"StructUtils",     // Added for FInstancedStruct
+				"SyGameplay",     // Added for FInstancedStruct
+				"SyEntity",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
