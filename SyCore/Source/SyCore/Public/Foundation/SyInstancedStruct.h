@@ -15,4 +15,5 @@ USTRUCT(BlueprintType)
 struct SYCORE_API FSyBaseInstancedStruct
 {
     GENERATED_BODY()
+    virtual ~FSyBaseInstancedStruct() = default;
 };

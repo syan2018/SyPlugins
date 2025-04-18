@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
+using System.IO;
 
 public class SyGameplay : ModuleRules
 {
@@ -11,6 +12,12 @@ public class SyGameplay : ModuleRules
 		PublicIncludePaths.AddRange(
 			new string[] {
 				// ... add public include paths required here ...
+				Path.Combine(ModuleDirectory, "Public"), // Base Public path
+				Path.Combine(ModuleDirectory, "Public/Metadatas"), // Metadata Public path
+				// Include path for SyStateCore if needed for FSyListParameterBase, etc.
+				// Assuming SyStateCore is in the same Plugins folder
+				// You might need to adjust this path based on your project structure
+				// System.IO.Path.Combine(PluginDirectory, "../SyStateCore/Source/SyStateCore/Public"),
 			}
 			);
 				
@@ -18,6 +25,8 @@ public class SyGameplay : ModuleRules
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				// ... add other private include paths required here ...
+				Path.Combine(ModuleDirectory, "Private"), // Base Private path
+				Path.Combine(ModuleDirectory, "Private/Metadatas"), // Metadata Private path
 			}
 			);
 			
@@ -32,6 +41,9 @@ public class SyGameplay : ModuleRules
 				"AIModule",
 				"GameplayTags",
 				"UMG",
+				"StructUtils",
+				"StateTreeModule",
+				"Flow",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

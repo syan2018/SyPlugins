@@ -7,10 +7,10 @@
 
 /**
  * @brief 通用列表参数的基类。
- * 所有需要列表聚合行为（如追加）的参数结构体都应从此类继承。
- * 内部使用 TArray<FInstancedStruct> 来存储列表项，提供最大的灵活性。
+ * 子类需要实现具体的列表存储和聚合逻辑。
+ * 提供虚函数接口供内部系统（如状态聚合）调用。
  */
-USTRUCT(BlueprintType) 
+USTRUCT() // 仍然是 USTRUCT
 struct SYSTATECORE_API FSyListParameterBase : public FSyBaseInstancedStruct
 {
     GENERATED_BODY()
@@ -18,15 +18,44 @@ struct SYSTATECORE_API FSyListParameterBase : public FSyBaseInstancedStruct
     /** 用于定义子类的对象类型 */
     TObjectPtr<const UScriptStruct> ScriptStruct = nullptr;
 
-    /** 存储列表元素的数组，可以是任何 FInstancedStruct 支持的类型 */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="List Value", meta=(DisplayName="List Items"))
-    TArray<FInstancedStruct> ListItems;
+    /**
+     * @brief [Internal C++] 获取此列表结构实际存储项的数组引用（子类实现）。
+     * 非 UFUNCTION，仅供 C++ 内部聚合逻辑使用。
+     * @return 对内部列表项数组的可变引用。
+     */
+    virtual TArray<FInstancedStruct>& GetListItemsInternal()
+    {
+        // 基类返回静态空数组引用，防止直接使用基类时出错
+        static TArray<FInstancedStruct> EmptyArray;
+        UE_LOG(LogTemp, Warning, TEXT("GetListItemsInternal called on FSyListParameterBase itself. Returning empty array. Ensure you are using a derived class instance."));
+        return EmptyArray;
+    }
 
-    // 默认构造函数
-    FSyListParameterBase() = default;
+    /**
+     * @brief [Internal C++] 获取此列表结构实际存储项的数组常量引用（子类实现）。
+     * 非 UFUNCTION，仅供 C++ 内部聚合逻辑使用。
+     * @return 对内部列表项数组的常量引用。
+     */
+    virtual const TArray<FInstancedStruct>& GetListItemsInternal() const
+    {
+        static const TArray<FInstancedStruct> EmptyArray;
+        UE_LOG(LogTemp, Warning, TEXT("GetListItemsInternal (const) called on FSyListParameterBase itself. Returning empty array. Ensure you are using a derived class instance."));
+        return EmptyArray;
+    }
 
-    // 可以添加其他方法，例如 AddItem, RemoveItem 等，如果需要的话
-    // void AddItem(const FInstancedStruct& NewItem) { ListItems.Add(NewItem); }
+    /**
+     * @brief [Internal C++] 将源列表项聚合到此列表结构中（子类实现）。
+     * 非 UFUNCTION，仅供 C++ 内部聚合逻辑使用。
+     * @param SourceItems 要聚合的源列表项。
+     */
+    virtual void AggregateItemsInternal(const TArray<FInstancedStruct>& SourceItems)
+    {
+        // 基类默认不执行任何操作。子类应重写此方法以实现追加逻辑。
+        UE_LOG(LogTemp, Warning, TEXT("AggregateItemsInternal called on FSyListParameterBase itself. No operation performed. Ensure you are using a derived class instance."));
+    }
+
+    // 不再需要特定的构造函数
+    // FSyListParameterBase() = default;
 };
 
 // --- 你可以在这里定义具体的列表类型，继承自 FSyListParameterBase --- 

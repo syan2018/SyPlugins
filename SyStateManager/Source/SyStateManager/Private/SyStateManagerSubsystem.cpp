@@ -107,23 +107,26 @@ FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const 
                     const UScriptStruct* ListBaseType = FSyListParameterBase::StaticStruct(); // 获取列表基类类型
 
                     // --- 检查是否为列表类型并应用列表聚合逻辑 ---
-                    if (StructType && StructType->IsChildOf(ListBaseType))
+                    // （这里的 StructType 是 SourceStruct.GetScriptStruct()）
+                    if (StructType && StructType->IsChildOf(ListBaseType) && TargetStructPtr->GetScriptStruct()->IsChildOf(ListBaseType)) // 确保目标和源都是列表类型
                     {
-                        UE_LOG(LogSyStateManager, Verbose, TEXT("Aggregating list type %s using append logic."), *StructType->GetName());
+                        UE_LOG(LogSyStateManager, Verbose, TEXT("Aggregating list type %s using virtual aggregation logic."), *StructType->GetName());
 
-                        // 获取目标和源的可变/常量指针
-                        // 注意：使用 GetMutablePtr/GetPtr 而不是 GetMutableValue/GetValue，因为我们操作的是结构体本身（访问其 ListItems 成员）
+                        // 获取目标和源的可变/常量基类指针
                         FSyListParameterBase* TargetListBase = TargetStructPtr->GetMutablePtr<FSyListParameterBase>();
                         const FSyListParameterBase* SourceListBase = SourceStruct.GetPtr<FSyListParameterBase>();
 
-                        if (TargetListBase && SourceListBase && TargetListBase->ScriptStruct == SourceListBase->ScriptStruct)
+                        if (TargetListBase && SourceListBase)
                         {
-                            TargetListBase->ListItems.Append(SourceListBase->ListItems);
+                            // 通过虚函数获取源列表项
+                            const TArray<FInstancedStruct>& ItemsToAggregate = SourceListBase->GetListItemsInternal();
+                            // 通过虚函数执行聚合
+                            TargetListBase->AggregateItemsInternal(ItemsToAggregate);
                         }
                         else
                         {
-                            // 如果类型转换失败（理论上不应发生，因为 IsChildOf 检查通过了），记录警告并回退到覆盖
-                            UE_LOG(LogSyStateManager, Warning, TEXT("Failed to cast to FSyListParameterBase for aggregation despite IsChildOf check for type: %s. Falling back to overwrite."), *StructType->GetName());
+                            // 如果类型转换失败，记录警告并回退到覆盖
+                            UE_LOG(LogSyStateManager, Warning, TEXT("Failed to get FSyListParameterBase pointers for aggregation for type: %s. Falling back to overwrite."), *StructType->GetName());
                             *TargetStructPtr = SourceStruct;
                         }
                     }
