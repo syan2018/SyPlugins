@@ -97,24 +97,3 @@ Detailed introductions for each module can be found in their respective README.m
 ## TODO
 
 (To be organized)
-
-
-## Project Origin
-
-(Ramblings)
-
-
-
-The project idea originated from a framework designed for a single-player game at my previous company, which couldn't be properly implemented due to some unforeseen circumstances [[记录]设计一套通用的游戏事件底层 – 再见，避风港！](http://blog.cyasylum.top/index.php/2024/03/31/%e8%ae%b0%e5%bd%95%e8%ae%be%e8%ae%a1%e4%b8%80%e5%a5%97%e9%80%9a%e7%94%a8%e7%9a%84%e6%b8%b8%e6%88%8f%e4%ba%8b%e4%bb%b6%e5%ba%95%e5%b1%82/) (Link in Chinese). The initial core ideas were **layered logic management** and a **message bus**.
-
-1.  At the game level, separate flow logic and object logic into layers.
-2.  Establish clear message passing links between layers, communicating based on entity identifiers.
-
-Over the past year, while designing a quest system for an online game, I accumulated some unsuccessful work experience, which led to the introduction of **entities and componentization**, **state management**, and support for a certain degree of front-end/back-end separation design.
-
-1.  Identify game objects based on entity identifiers.
-2.  Implement logic presentation for different states based on logical components.
-3.  Pursue source tracking, lifecycle management, conflict management, etc., for global entity state management.
-4.  (To be implemented) Layering and maintenance of front-end and back-end logic.
-
-After consolidating these ideas, the design approach for the underlying game quest and level systems became clearer. Coincidentally, a friend was making a demo for miHoYo, so I helped build a tool to contribute. Additionally, having recently resigned to start an AI venture, I used Cursor to write this out, reinforcing Vibe Coding engineering habits and, incidentally, leaving a fallback option for my TD career. Isn't that wonderful? 

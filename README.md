@@ -1,6 +1,6 @@
 # SyPlugins - Unreal Engine 模块化事件与状态管理系统
 
-README in Other Language：
+README in Other Language: 
 
 <p align="left">
   <a href="./README_EN.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
