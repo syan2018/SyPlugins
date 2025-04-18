@@ -177,9 +177,9 @@ void USyEntityComponent::BindComponentDelegates()
     if (StateComponent)
     {
         // 先移除旧的绑定（如果有的话），防止重复绑定
-        StateComponent->OnLocalStateDataChanged.RemoveAll(this);
+        StateComponent->OnEffectiveStateChanged.RemoveAll(this);
         // 添加新的绑定
-        StateComponent->OnLocalStateDataChanged.AddUObject(this, &USyEntityComponent::HandleLocalStateDataChanged);
+        StateComponent->OnEffectiveStateChanged.AddUObject(this, &USyEntityComponent::HandleLocalStateDataChanged);
     }
 
     // TODO: 绑定其他组件（如 IdentityComponent）的事件

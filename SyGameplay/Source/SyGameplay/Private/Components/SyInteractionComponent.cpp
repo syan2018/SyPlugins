@@ -27,7 +27,7 @@ void USyInteractionComponent::BeginPlay()
 
     if (CachedStateComponent)
     {
-        CachedStateComponent->OnLocalStateDataChanged.AddUObject(this, &USyInteractionComponent::HandleStateChanged);
+        CachedStateComponent->OnEffectiveStateChanged.AddUObject(this, &USyInteractionComponent::HandleStateChanged);
         HandleStateChanged();
     }
     else
@@ -40,7 +40,7 @@ void USyInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     if (CachedStateComponent)
     {
-        CachedStateComponent->OnLocalStateDataChanged.RemoveAll(this);
+        CachedStateComponent->OnEffectiveStateChanged.RemoveAll(this);
     }
 
     Super::EndPlay(EndPlayReason);
@@ -75,7 +75,7 @@ void USyInteractionComponent::HandleStateChanged()
     }
 
     const FGameplayTag InteractableTag = FGameplayTag::RequestGameplayTag(TEXT("State.Interact.Interactable"));
-    const FSyStateCategories& CurrentState = CachedStateComponent->GetCurrentStateCategories();
+    const FSyStateCategories& CurrentState = CachedStateComponent->GetEffectiveStateCategories();
     
     if (USyStateMetadataBase* Metadata = CurrentState.FindFirstStateMetadata<USyStateMetadataBase>(InteractableTag))
     {
@@ -118,7 +118,7 @@ void USyInteractionComponent::HandleInteractionRequest()
     // 进入交互后临时关闭，肯定有更合适的处理方式
     Disable();
 
-    const FSyStateCategories& CurrentState = CachedStateComponent->GetCurrentStateCategories();
+    const FSyStateCategories& CurrentState = CachedStateComponent->GetEffectiveStateCategories();
     const USyInteractionListMetadata* ListMetadata = CurrentState.FindFirstStateMetadata<USyInteractionListMetadata>(InteractionListMetadataTag);
 
     if (!ListMetadata)

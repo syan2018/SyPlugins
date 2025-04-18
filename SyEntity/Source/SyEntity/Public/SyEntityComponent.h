@@ -144,6 +144,7 @@ private:
     void RegisterWithRegistry();
     void UnregisterFromRegistry();
     void BindComponentDelegates(); // 重命名，绑定所有组件的委托
+    
     void HandleLocalStateDataChanged(); // StateComponent 内部事件处理
     void HandleEntityIdReady(); // IdentityComponent ID生成事件处理
 };

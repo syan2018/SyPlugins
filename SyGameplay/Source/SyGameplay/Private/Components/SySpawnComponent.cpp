@@ -22,7 +22,7 @@ void USySpawnComponent::BeginPlay()
     // 如果找到StateComponent，绑定状态变化事件
     if (StateComponent)
     {
-        StateComponent->OnLocalStateDataChanged.AddUObject(this, &USySpawnComponent::HandleStateChanged);
+        StateComponent->OnEffectiveStateChanged.AddUObject(this, &USySpawnComponent::HandleStateChanged);
         // 初始状态检查
         HandleStateChanged();
     }
@@ -37,7 +37,7 @@ void USySpawnComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
     // 解绑状态变化事件
     if (StateComponent)
     {
-        StateComponent->OnLocalStateDataChanged.RemoveAll(this);
+        StateComponent->OnEffectiveStateChanged.RemoveAll(this);
     }
 
     Super::EndPlay(EndPlayReason);
@@ -67,7 +67,7 @@ void USySpawnComponent::HandleStateChanged()
 
     // 检查"State.Spawner.Enable"标签的状态
     const FGameplayTag SpawnerEnableTag = FGameplayTag::RequestGameplayTag(TEXT("State.Spawner.Enable"));
-    const FSyStateCategories& CurrentState = StateComponent->GetCurrentStateCategories();
+    const FSyStateCategories& CurrentState = StateComponent->GetEffectiveStateCategories();
     
     // 查找Spawner.Enable标签的第一个元数据
     if (USyStateMetadataBase* Metadata = CurrentState.FindFirstStateMetadata<USyStateMetadataBase>(SpawnerEnableTag))

@@ -5,6 +5,9 @@
 #include "StateMetadataTypes.h"
 #include "DS_TagMetadata.h"
 #include "Logging/LogMacros.h"
+#include "UObject/Package.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogSyStateCategories, Log, All);
 
 // --- Helper Function --- 
 
@@ -44,92 +47,165 @@ static USyStateMetadataBase* FindOrAddLocalMetadataInstance(FSyStateMetadatas& L
 
 void FSyStateCategories::ApplyInitData(const FSyStateParameterSet& InitData)
 {
-    // Iterate through all provided initialization entries (Tag + Params)
-    for (const FSyStateParams& ParamsEntry : InitData.Parameters)
+    Empty(); // Clear existing data first
+
+    // Iterate through InitData map {Tag -> Array<FInstancedStruct>}
+    for (const auto& Pair : InitData.GetParametersAsMap())
     {
-        const FGameplayTag& StateTag = ParamsEntry.Tag;
-        const TArray<FInstancedStruct>& InitParams = ParamsEntry.Params; // Provided init parameters for this tag
+        const FGameplayTag& StateTag = Pair.Key;
+        const TArray<FInstancedStruct>& InitParamsForTag = Pair.Value;
 
-        // Get metadata instances defined for this tag by the system (UDS)
-        TArray<UO_TagMetadata*> MetadataInstances = UDS_TagMetadata::GetTagMetadata(StateTag);
+        // Get the TEMPLATE metadata objects defined for this tag (defines expected TYPES)
+        TArray<UO_TagMetadata*> TemplateInstances = UDS_TagMetadata::GetTagMetadata(StateTag); // Assuming this returns correct templates
 
-        // Get or create local storage for this tag
-        FSyStateMetadatas& LocalMetadataArray = StateData.FindOrAdd(StateTag);
+        FSyStateMetadatas& CurrentMetadatas = StateData.FindOrAdd(StateTag);
+        CurrentMetadatas.MetadataArray.Empty(); // Start fresh for this tag
 
-        // Iterate through each metadata type defined for the tag
-        for (UO_TagMetadata* MetadataInstanceTemplate : MetadataInstances)
+        // Iterate through the TEMPLATE types expected for this tag
+        for (UO_TagMetadata* TemplateInstance : TemplateInstances)
         {
-            USyStateMetadataBase* TemplateMetadata = Cast<USyStateMetadataBase>(MetadataInstanceTemplate);
+            USyStateMetadataBase* TemplateMetadata = Cast<USyStateMetadataBase>(TemplateInstance);
             if (!TemplateMetadata) continue;
 
-            // Find or add the corresponding local instance
-            USyStateMetadataBase* TargetMetadata = FindOrAddLocalMetadataInstance(LocalMetadataArray, TemplateMetadata, StateTag);
-            if (!TargetMetadata) continue; // Should not happen if TemplateMetadata is valid
+            UClass* ExpectedMetadataClass = TemplateMetadata->GetClass();
+            UScriptStruct* ExpectedValueType = TemplateMetadata->GetValueDataType();
 
-            // Find a matching initialization parameter based on type
-            bool bFoundMatchingParam = false;
-            for (const FInstancedStruct& InitParam : InitParams)
+            // Create a NEW instance of the correct metadata CLASS for this tag
+            USyStateMetadataBase* NewMetadataInstance = NewObject<USyStateMetadataBase>(GetTransientPackage(), ExpectedMetadataClass); // Need Outer?
+            if (!NewMetadataInstance)
             {
-                // --- Type Matching Placeholder ---
-                // Ideally, check type compatibility here:
-                // if (TargetMetadata->CanInitializeFrom(InitParam))
-                // For now, we assume InitializeFromParams handles mismatch or we try the first valid param.
-                if (InitParam.IsValid()) // Simple check: Is the param data valid?
+                UE_LOG(LogSyStateCategories, Error, TEXT("ApplyInitData: Failed to create metadata object of class %s for tag %s."), *ExpectedMetadataClass->GetName(), *StateTag.ToString());
+                continue;
+            }
+
+            // Find the corresponding initialization parameter from the input data
+            const FInstancedStruct* FoundInitParam = InitParamsForTag.FindByPredicate(
+                [&ExpectedValueType](const FInstancedStruct& Param) {
+                    return Param.IsValid() && Param.GetScriptStruct() == ExpectedValueType;
+                });
+
+            // Initialize the new instance with the found parameter (if any), otherwise it uses defaults
+            if (FoundInitParam)
+            {
+                NewMetadataInstance->SetValueStruct(*FoundInitParam);
+            }
+            else
+            {
+                UE_LOG(LogSyStateCategories, Verbose, TEXT("ApplyInitData: No init param found for type %s (Metadata Class: %s) for tag %s. Using default value."),
+                       *GetNameSafe(ExpectedValueType), *ExpectedMetadataClass->GetName(), *StateTag.ToString());
+                // NewMetadataInstance already has default values from its constructor
+            }
+
+            // Add the newly created and initialized instance to the state
+            CurrentMetadatas.MetadataArray.Add(NewMetadataInstance);
+        }
+    }
+}
+
+void FSyStateCategories::UpdateFromParameterMap(const TMap<FGameplayTag, TArray<FInstancedStruct>>& AggregatedParamsMap)
+{
+    // 1. Identify and remove tags no longer present in the aggregated map
+    TArray<FGameplayTag> TagsToRemove;
+    for (const auto& CurrentPair : StateData)
+    {
+        if (!AggregatedParamsMap.Contains(CurrentPair.Key))
+        {
+            TagsToRemove.Add(CurrentPair.Key);
+        }
+    }
+    for (const FGameplayTag& Tag : TagsToRemove)
+    {
+        StateData.Remove(Tag);
+        UE_LOG(LogSyStateCategories, Verbose, TEXT("UpdateFromParameterMap: Removing state tag %s."), *Tag.ToString());
+    }
+
+    // 2. Iterate through the aggregated map to update existing tags or add new ones
+    for (const auto& AggregatedPair : AggregatedParamsMap)
+    {
+        const FGameplayTag& StateTag = AggregatedPair.Key;
+        const TArray<FInstancedStruct>& NewParamsForTag = AggregatedPair.Value;
+
+        // Get the TEMPLATE metadata objects defined for this tag (defines expected TYPES)
+        TArray<UO_TagMetadata*> TemplateInstances = UDS_TagMetadata::GetTagMetadata(StateTag); // Assuming this returns correct templates
+
+        FSyStateMetadatas& CurrentMetadatas = StateData.FindOrAdd(StateTag);
+        TArray<TObjectPtr<UO_TagMetadata>> OldMetadataObjects = CurrentMetadatas.MetadataArray; // Keep track of old objects
+        TArray<TObjectPtr<UO_TagMetadata>> NewMetadataArray; // Build the new list for this tag
+        TSet<int32> UsedOldIndices; // Track which old objects were updated/reused
+
+        // Iterate through the TEMPLATE types expected for this tag
+        for (UO_TagMetadata* TemplateInstance : TemplateInstances)
+        {
+            USyStateMetadataBase* TemplateMetadata = Cast<USyStateMetadataBase>(TemplateInstance);
+            if (!TemplateMetadata) continue;
+
+            UClass* ExpectedMetadataClass = TemplateMetadata->GetClass();
+            UScriptStruct* ExpectedValueType = TemplateMetadata->GetValueDataType();
+
+            // Find the corresponding aggregated parameter from the input map for this specific type
+            const FInstancedStruct* FoundAggregatedParam = NewParamsForTag.FindByPredicate(
+                [&ExpectedValueType](const FInstancedStruct& Param) {
+                    return Param.IsValid() && Param.GetScriptStruct() == ExpectedValueType;
+                });
+
+            if (FoundAggregatedParam) // A value for this type exists in the aggregated state
+            {
+                // Try to find an existing local instance of the correct class
+                UO_TagMetadata* ExistingInstanceToUpdate = nullptr;
+                int32 FoundOldIndex = INDEX_NONE;
+                for(int32 i = 0; i < OldMetadataObjects.Num(); ++i)
                 {
-                    // Initialize using the first matching parameter found
-                    TargetMetadata->InitializeFromParams(InitParam);
-                    bFoundMatchingParam = true;
-                    // Assuming one init param per metadata type is intended in the InitParams array
-                    break; 
+                    // Check if the index hasn't been used and the object is valid and of the correct CLASS
+                    if (!UsedOldIndices.Contains(i) && OldMetadataObjects[i] && OldMetadataObjects[i]->IsA(ExpectedMetadataClass))
+                    {
+                        ExistingInstanceToUpdate = OldMetadataObjects[i];
+                        FoundOldIndex = i;
+                        break;
+                    }
+                }
+
+                if (ExistingInstanceToUpdate) // Reuse existing instance
+                {
+                    Cast<USyStateMetadataBase>(ExistingInstanceToUpdate)->SetValueStruct(*FoundAggregatedParam);
+                    NewMetadataArray.Add(ExistingInstanceToUpdate); // Add the updated instance to the new list
+                    UsedOldIndices.Add(FoundOldIndex); // Mark index as used
+                    UE_LOG(LogSyStateCategories, Verbose, TEXT("UpdateFromParameterMap: Updated existing metadata %s for tag %s."), *ExpectedMetadataClass->GetName(), *StateTag.ToString());
+                }
+                else // Create new instance
+                {
+                    USyStateMetadataBase* NewMetadataInstance = NewObject<USyStateMetadataBase>(GetTransientPackage(), ExpectedMetadataClass); // Need Outer?
+                    if (NewMetadataInstance)
+                    {
+                        NewMetadataInstance->SetValueStruct(*FoundAggregatedParam);
+                        NewMetadataArray.Add(NewMetadataInstance); // Add the new instance to the new list
+                        UE_LOG(LogSyStateCategories, Verbose, TEXT("UpdateFromParameterMap: Created new metadata %s for tag %s."), *ExpectedMetadataClass->GetName(), *StateTag.ToString());
+                    }
+                    else { UE_LOG(LogSyStateCategories, Error, TEXT("UpdateFromParameterMap: Failed to create metadata %s for tag %s."), *ExpectedMetadataClass->GetName(), *StateTag.ToString()); }
                 }
             }
-
-            // Handle case where no suitable init param was found for this metadata type
-            if (!bFoundMatchingParam)
+            else // No aggregated value for this type exists (e.g., due to unloading).
             {
-                // If the instance was newly added by FindOrAddLocalMetadataInstance, it has defaults.
-                // If it existed, it retains its old state.
-                UE_LOG(LogTemp, Verbose, TEXT("FSyStateCategories::ApplyInitData: No suitable initialization parameter found in provided InitParams for metadata type '%s' for tag '%s'. Instance will use defaults or retain existing state."),
-                       *TargetMetadata->GetClass()->GetName(), *StateTag.ToString());
+                 // Simply don't add any instance of this ExpectedMetadataClass to NewMetadataArray.
+                 // Any existing instance in OldMetadataObjects of this class that isn't reused will be GC'd.
+                 UE_LOG(LogSyStateCategories, Verbose, TEXT("UpdateFromParameterMap: No aggregated value for metadata type %s for tag %s. Instance (if any) removed/reset."), *ExpectedMetadataClass->GetName(), *StateTag.ToString());
             }
         }
+        // Replace the old metadata array for this tag with the newly constructed one
+        CurrentMetadatas.MetadataArray = NewMetadataArray;
     }
 }
 
-void FSyStateCategories::ApplyStateModifications(const TMap<FGameplayTag, TArray<FInstancedStruct>>& StateModifications)
+void FSyStateCategories::MergeWith(const FSyStateCategories& Other)
 {
-    // Iterate through all modification intentions (Tag + ModParams)
-    for (const auto& StatePair : StateModifications)
+    // Keeping the simple MergeWith implementation as requested previously.
+    // Be mindful of potential inconsistencies with UpdateFromParameterMap's optimization.
+    for (const auto& Pair : Other.StateData)
     {
-        const FGameplayTag& StateTag = StatePair.Key;
-        const TArray<FInstancedStruct>& ModificationParams = StatePair.Value;
-
-        if (ModificationParams.IsEmpty()) continue;
-
-        // Get or create local storage for this tag
-        FSyStateMetadatas& LocalMetadataArray = StateData.FindOrAdd(StateTag);
-        
-        // Get metadata instances defined for this tag by the system (UDS)
-        TArray<UO_TagMetadata*> TagDefinedInstances = UDS_TagMetadata::GetTagMetadata(StateTag);
-
-        // Iterate through each metadata type defined for the tag
-        for (UO_TagMetadata* TagDefinedInstance : TagDefinedInstances)
-        {
-            USyStateMetadataBase* TemplateMetadata = Cast<USyStateMetadataBase>(TagDefinedInstance);
-            if (!TemplateMetadata) continue;
-
-            // Find or add the corresponding local instance
-            USyStateMetadataBase* TargetInstance = FindOrAddLocalMetadataInstance(LocalMetadataArray, TemplateMetadata, StateTag);
-            if (!TargetInstance) continue;
-
-            // Apply modifications - let the instance decide if a param applies
-            // TODO: 当前为顺序更新，后置记录覆盖前置记录
-            // 理想情况下应当确保唯一性，相关逻辑当在StateManager获取时处理
-            for (const FInstancedStruct& ModParam : ModificationParams)
-            {
-                // ApplyModification should internally check if ModParam type is relevant
-                TargetInstance->ApplyModification(ModParam);
-            }
-        }
+        const FGameplayTag& StateTag = Pair.Key;
+        const FSyStateMetadatas& OtherMetadatas = Pair.Value;
+        StateData.FindOrAdd(StateTag) = OtherMetadatas;
     }
 }
+
+
+

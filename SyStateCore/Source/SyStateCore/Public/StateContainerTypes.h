@@ -77,9 +77,9 @@ struct SYSTATECORE_API FSyStateCategories
 	template<typename T>
 	T* FindFirstStateMetadata(const FGameplayTag& StateTag) const
 	{
-		if (const FSyStateMetadatas* MetadataArray = StateData.Find(StateTag))
+		if (const FSyStateMetadatas* MetadataArrayPtr = StateData.Find(StateTag))
 		{
-			for (const TObjectPtr<UO_TagMetadata>& Metadata : MetadataArray->MetadataArray)
+			for (const TObjectPtr<UO_TagMetadata>& Metadata : MetadataArrayPtr->MetadataArray)
 			{
 				if (T* TypedMetadata = Cast<T>(Metadata))
 				{
@@ -95,9 +95,9 @@ struct SYSTATECORE_API FSyStateCategories
 	TArray<T*> GetAllStateMetadata(const FGameplayTag& StateTag) const
 	{
 		TArray<T*> Result;
-		 if (const FSyStateMetadatas* MetadataArray = StateData.Find(StateTag))
+		 if (const FSyStateMetadatas* MetadataArrayPtr = StateData.Find(StateTag))
         {
-            for (const TObjectPtr<UO_TagMetadata>& Metadata : MetadataArray->MetadataArray)
+            for (const TObjectPtr<UO_TagMetadata>& Metadata : MetadataArrayPtr->MetadataArray)
             {
                 if (T* TypedMetadata = Cast<T>(Metadata))
                 {
@@ -108,7 +108,7 @@ struct SYSTATECORE_API FSyStateCategories
 		return Result;
 	}
 
-	/** 添加状态元数据对象 */
+	/** 添加状态元数据对象 (内部使用，可能被 AddOrUpdateMetadataParam 取代) */
 	void AddStateMetadata(const FGameplayTag& StateTag, UO_TagMetadata* Metadata)
 	{
 		if (Metadata)
@@ -121,9 +121,9 @@ struct SYSTATECORE_API FSyStateCategories
 	/** 移除状态元数据对象 */
 	bool RemoveStateMetadata(const FGameplayTag& StateTag, UO_TagMetadata* Metadata)
 	{
-		if (FSyStateMetadatas* MetadataArray = StateData.Find(StateTag))
+		if (FSyStateMetadatas* MetadataArrayPtr = StateData.Find(StateTag))
 		{
-			return MetadataArray->MetadataArray.Remove(Metadata) > 0;
+			return MetadataArrayPtr->MetadataArray.Remove(Metadata) > 0;
 		}
 		return false;
 	}
@@ -134,8 +134,8 @@ struct SYSTATECORE_API FSyStateCategories
 		StateData.Remove(StateTag);
 	}
 
-	/** 清除所有状态元数据对象 */
-	void ClearAllStateMetadata()
+	/** 清除所有状态数据 */
+	void Empty()
 	{
 		StateData.Empty();
 	}
@@ -143,6 +143,23 @@ struct SYSTATECORE_API FSyStateCategories
 	/** 批量应用初始化数据 */
     void ApplyInitData(const FSyStateParameterSet& InitData);
 
-    /** 批量应用状态修改 */
-    void ApplyStateModifications(const TMap<FGameplayTag, TArray<FInstancedStruct>>& StateModifications);
+    /** 
+     * @brief 从参数Map智能更新状态，尝试复用现有元数据对象。
+     * @param AggregatedParamsMap 包含聚合后状态参数的Map。
+     */
+    void UpdateFromParameterMap(const TMap<FGameplayTag, TArray<FInstancedStruct>>& AggregatedParamsMap);
+
+    /** 获取内部数据Map的常量引用 (供 GetEffectiveStateCategories 使用) */
+	const TMap<FGameplayTag, FSyStateMetadatas>& GetStateDataMap() const { return StateData; }
+
+	/** 添加或更新指定Tag下的元数据 */
+	void AddOrUpdateMetadataParam(const FGameplayTag& StateTag, const TArray<FInstancedStruct>& NewParams);
+
+	/**
+	 * @brief 将另一个状态集合合并到当前集合中。
+	 *        来自 'Other' 的状态标签会覆盖当前集合中已存在的同名标签。
+	 *        仅存在于 'Other' 中的标签会被添加进来。
+	 * @param Other 要合并进来的状态集合 (其状态具有更高优先级)。
+	 */
+	void MergeWith(const FSyStateCategories& Other);
 }; 

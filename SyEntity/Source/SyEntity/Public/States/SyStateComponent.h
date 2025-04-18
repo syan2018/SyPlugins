@@ -36,12 +36,47 @@ public:
 
     // --- 状态访问 ---
     /**
-     * @brief 获取实体当前的运行时状态容器。
+     * @brief 获取本地（初始/默认）状态。
      * @return 对本地 FSyStateCategories 的常量引用。
      * @note 直接通过此容器访问状态数据 (例如使用 FindFirstStateMetadata<T>)。
      */
-    UFUNCTION(BlueprintPure, Category = "SyState")
-    const FSyStateCategories& GetCurrentStateCategories() const { return CurrentStateCategories; }
+    UFUNCTION(BlueprintPure, Category = "SyState|Access")
+    const FSyStateCategories& GetLocalStateCategories() const { return LocalStateCategories; }
+
+    /**
+     * @brief 获取全局（聚合修改后）的状态。
+     * @return 对全局 FSyStateCategories 的常量引用。
+     * @note 直接通过此容器访问状态数据 (例如使用 FindFirstStateMetadata<T>)。
+     */
+    UFUNCTION(BlueprintPure, Category = "SyState|Access")
+    const FSyStateCategories& GetGlobalStateCategories() const { return GlobalStateCategories; }
+
+    /**
+     * @brief 获取最终生效的状态集合 (本地状态被全局状态覆盖/合并)
+     * @return 一个包含最终生效状态的 FSyStateCategories 副本。
+     */
+    UFUNCTION(BlueprintPure, Category = "SyState|Access", meta=(DisplayName="Get Effective State Categories"))
+    FSyStateCategories GetEffectiveStateCategories() const;
+
+    /**
+     * @brief 获取指定标签最终生效的第一个元数据参数。
+     * 优先从全局状态查找，如果找不到则从本地状态查找。
+     * @param StateTag 要查找的状态标签。
+     * @param OutParam 如果找到，将填充参数；否则保持不变。
+     * @return 如果找到参数则返回 true。
+     */
+    UFUNCTION(BlueprintCallable, Category = "SyState|Access", meta=(DisplayName="Get Effective State Param (Struct)"))
+    bool GetEffectiveStateParam(FGameplayTag StateTag, UPARAM(ref) FInstancedStruct& OutParam) const;
+
+    /**
+     * @brief 获取指定标签最终生效的第一个特定类型的元数据值。
+     * @tparam T 期望获取的元数据内部值的类型 (e.g., bool, float, FVector)。
+     * @param StateTag 要查找的状态标签。
+     * @param OutValue 如果找到且类型匹配，则填充值。
+     * @return 如果成功找到并获取到正确类型的值，返回 true。
+     */
+    template<typename T>
+    bool GetEffectiveStateValue(FGameplayTag StateTag, T& OutValue) const;
 
     // --- 配置 ---
     /**
@@ -80,8 +115,8 @@ public:
      *  参数可以设计为传递变化的具体 StateTag 和对应的 Metadata 对象，或者更简单的只通知"状态已变"。
      *  为了简化，我们先定义一个无参数的委托。
      */
-    DECLARE_MULTICAST_DELEGATE(FOnLocalStateDataChanged);
-    FOnLocalStateDataChanged OnLocalStateDataChanged;
+    DECLARE_MULTICAST_DELEGATE(FOnEffectiveStateChanged);
+    FOnEffectiveStateChanged OnEffectiveStateChanged;
 
 protected:
     //~ Begin UActorComponent Interface
@@ -89,9 +124,13 @@ protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     //~ End UActorComponent Interface
 
-    /** 存储实体当前的运行时状态 */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Data", meta = (AllowPrivateAccess = "true"))
-    FSyStateCategories CurrentStateCategories;
+    /** 存储本地（初始/默认）状态数据 */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Internal", meta = (AllowPrivateAccess = "true"))
+    FSyStateCategories LocalStateCategories;
+
+    /** 存储从 StateManager 聚合来的全局状态修改 */
+    UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Internal", meta = (AllowPrivateAccess = "true"))
+    FSyStateCategories GlobalStateCategories;
 
 private:
     /** 缓存 StateManager 子系统指针 */
@@ -107,7 +146,7 @@ private:
      * @param NewRecord 新记录。
      */
     UFUNCTION()
-    void HandleStateModificationRecorded(const FSyStateModificationRecord& NewRecord);
+    void HandleStateModificationChanged(const FSyStateModificationRecord& ChangedRecord);
 
     /**
      * @brief 尝试连接到 StateManager 并订阅事件。
@@ -133,4 +172,21 @@ private:
     // TODO: [拓展] 可能需要一个 Entity ID (FGuid) 来更精确地匹配 StateManager 中的目标。
     // 这个 ID 可以由外部系统设置，或者自动生成。
     // UPROPERTY(...) FGuid EntityId;
-}; 
+};
+
+// Template implementation for GetEffectiveStateValue
+template<typename T>
+bool USyStateComponent::GetEffectiveStateValue(FGameplayTag StateTag, T& OutValue) const
+{
+    FInstancedStruct ParamStruct;
+    if (GetEffectiveStateParam(StateTag, ParamStruct))
+    {
+        if (const T* ValuePtr = ParamStruct.GetPtr<T>())
+        {
+            OutValue = *ValuePtr;
+            return true;
+        }
+        // Optional: Log type mismatch warning?
+    }
+    return false;
+} 
