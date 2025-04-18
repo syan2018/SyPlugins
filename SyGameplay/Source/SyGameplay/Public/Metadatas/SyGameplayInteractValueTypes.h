@@ -7,10 +7,12 @@
 #include "Foundation/SyInstancedStruct.h" // For FSyBaseInstancedStruct
 #include "Metadatas/ListMetadataValueTypes.h" // For FSyListParameterBase (needs SyStateCore dependency)
 #include "UObject/SoftObjectPtr.h" // For TSoftObjectPtr
+#include "FlowAsset.h"
 #include "SyGameplayInteractValueTypes.generated.h"
 
+
 // Forward declaration for Flow Asset (avoids direct include dependency in header if possible)
-class UFlowAsset; 
+// class UFlowAsset; 
 
 /**
  * @brief 交互信息的基础结构体。
