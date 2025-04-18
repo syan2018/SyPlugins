@@ -127,7 +127,7 @@ void USyStateComponent::TryConnectToStateManager()
     if (StateManagerSubsystem)
     {
         // 订阅 StateManager 的事件 (使用 AddDynamic)
-        StateManagerSubsystem->OnStateModificationRecorded.AddDynamic(this, &USyStateComponent::HandleStateModificationRecorded);
+        StateManagerSubsystem->OnStateModificationChanged.AddDynamic(this, &USyStateComponent::HandleStateModificationRecorded);
         UE_LOG(LogSyStateComponent, Log, TEXT("%s: Connected to StateManagerSubsystem and subscribed to events."), *GetNameSafe(GetOwner()));
     }
     else
@@ -142,7 +142,7 @@ void USyStateComponent::DisconnectFromStateManager()
     if (StateManagerSubsystem)
     {
         // 解绑 StateManager 的事件 (使用 RemoveDynamic)
-        StateManagerSubsystem->OnStateModificationRecorded.RemoveDynamic(this, &USyStateComponent::HandleStateModificationRecorded);
+        StateManagerSubsystem->OnStateModificationChanged.RemoveDynamic(this, &USyStateComponent::HandleStateModificationRecorded);
         UE_LOG(LogSyStateComponent, Log, TEXT("%s: Disconnected from StateManagerSubsystem."), *GetNameSafe(GetOwner()));
     }
     // 不需要手动将 StateManagerSubsystem 设为 nullptr，因为它是 TObjectPtr，会自动处理

@@ -17,6 +17,13 @@ namespace SyFlowNodeStateOpInputPins
     const FName Unload(TEXT("Unload")); // New Unload Pin
 }
 
+// Output Pins
+namespace SyFlowNodeStateOpOutputPins
+{
+    const FName Out(TEXT("Out"));
+    const FName Unloaded(TEXT("Unloaded")); // Optional Unloaded Pin
+}
+
 /**
  * Base class for Flow Nodes that apply a state operation via the StateManager.
  * Handles the configuration of the Target and a single Modifier parameter.
@@ -67,9 +74,11 @@ protected:
     /** Helper function to get the State Manager Subsystem. */
     USyStateManagerSubsystem* GetStateManagerSubsystem() const;
 
-    // --- TODO: Store Operation ID? ---
-    // UPROPERTY()
-    // FGuid AppliedOperationId; // Could store the ID if StateManager returns one upon recording
+    // --- State --- 
+
+    /** Stores the ID of the operation applied by this node instance. */
+    UPROPERTY(SaveGame) // Mark SaveGame if the Flow state needs to persist Operation IDs
+    FGuid AppliedOperationId = FGuid(); // Initialize to invalid
 
 public:
     // --- Node Info --- 
@@ -77,5 +86,6 @@ public:
     virtual FText GetNodeTitle() const override { return FText::FromString("State Op Base"); } 
     virtual FText GetNodeToolTip() const override;
     virtual FString GetNodeCategory() const override { return TEXT("SyPlugin|StateOp"); }
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override; // To clear ID if config changes
 #endif
 }; 

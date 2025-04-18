@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h" // 包含 GameplayStatics
 #include "StructUtils/InstancedStruct.h"
 #include "Metadatas/ListMetadataValueTypes.h" // *** 包含新的列表基类头文件 ***
+#include "Algo/RemoveIf.h" // Needed for RemoveAll Swap
 
 // 定义一个简单的日志分类
 DEFINE_LOG_CATEGORY_STATIC(LogSyStateManager, Log, All); // 启用日志以方便调试
@@ -25,12 +26,12 @@ void USyStateManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void USyStateManagerSubsystem::Deinitialize()
 {
-    UE_LOG(LogSyStateManager, Log, TEXT("SyStateManagerSubsystem Deinitializing. Saving log..."));
+    UE_LOG(LogSyStateManager, Log, TEXT("SyStateManagerSubsystem Deinitializing."));
     // 在子系统反初始化前尝试保存日志（确保游戏退出时也能保存）
     // TODO: 接入正常读档逻辑
     // SaveLog();
     ModificationLog.Empty();
-    OnStateModificationRecorded.Clear();
+    OnStateModificationChanged.Clear(); // Clear the unified delegate
     Super::Deinitialize();
 }
 
@@ -39,7 +40,7 @@ bool USyStateManagerSubsystem::RecordOperation(const FSyOperation& Operation)
     // 1. (可选) 基础验证
     if (!ValidateOperation(Operation))
     {
-        // UE_LOG(LogSyStateManager, Warning, TEXT("RecordOperation failed validation for OperationId: %s"), *Operation.OperationId.ToString());
+        UE_LOG(LogSyStateManager, Warning, TEXT("RecordOperation failed validation for OperationId: %s"), *Operation.OperationId.ToString());
         return false;
     }
 
@@ -51,6 +52,81 @@ bool USyStateManagerSubsystem::RecordOperation(const FSyOperation& Operation)
 
     // UE_LOG(LogSyStateManager, Verbose, TEXT("Operation recorded. RecordId: %s, OperationId: %s"), *NewRecord.RecordId.ToString(), *Operation.OperationId.ToString());
     return true;
+}
+
+bool USyStateManagerSubsystem::UnloadOperation(const FGuid& OperationIdToUnload)
+{
+    if (!OperationIdToUnload.IsValid())
+    {
+        UE_LOG(LogSyStateManager, Warning, TEXT("UnloadOperation called with invalid GUID."));
+        return false;
+    }
+
+    int32 FoundIndex = ModificationLog.IndexOfByPredicate(
+        [&](const FSyStateModificationRecord& Record){ return Record.Operation.OperationId == OperationIdToUnload; });
+
+    if (FoundIndex != INDEX_NONE)
+    {
+        FSyStateModificationRecord RecordCopy = ModificationLog[FoundIndex]; // Make a copy before removal
+        ModificationLog.RemoveAtSwap(FoundIndex); // Use RemoveAtSwap for efficiency
+        
+        UE_LOG(LogSyStateManager, Log, TEXT("Unloaded operation with ID: %s"), *OperationIdToUnload.ToString());
+        
+        // Broadcast the change using the unified delegate
+        if (OnStateModificationChanged.IsBound())
+        {
+            OnStateModificationChanged.Broadcast(RecordCopy); // Broadcast the removed record
+        }
+        return true;
+    }
+    else
+    {
+        UE_LOG(LogSyStateManager, Log, TEXT("UnloadOperation: Operation with ID %s not found in log."), *OperationIdToUnload.ToString());
+    }
+
+    return false;
+}
+
+// TODO: 替换为标准过滤规则，现在没用到所以懒得整
+int32 USyStateManagerSubsystem::UnloadOperationsBySource(const FSyOperationSource& SourceToMatch)
+{
+    TArray<FSyStateModificationRecord> RecordsToBroadcast;
+    int32 RemovedCount = 0;
+
+    // Use RemoveAllSwap with predicate, collecting copies for broadcast
+    RemovedCount = ModificationLog.RemoveAllSwap([
+        &](const FSyStateModificationRecord& Record) -> bool 
+        {
+            if (bool bMatch = (Record.Operation.Source.SourceTypeTag == SourceToMatch.SourceTypeTag))
+            {   
+                RecordsToBroadcast.Add(Record); // Add copy before potential removal
+                return true; // Mark for removal
+            }
+            return false; 
+        });
+
+    if (RemovedCount > 0)
+    {
+        UE_LOG(LogSyStateManager, Log, TEXT("Unloaded %d operations matching source (Tag: %s)."), 
+            RemovedCount, 
+            *SourceToMatch.SourceTypeTag.ToString());
+
+        // Broadcast the change for each removed record using the unified delegate
+        if (OnStateModificationChanged.IsBound())
+        {
+            for (const FSyStateModificationRecord& RemovedRecord : RecordsToBroadcast)
+            {
+                 OnStateModificationChanged.Broadcast(RemovedRecord);
+            }
+        }
+    }
+    else
+    {
+        UE_LOG(LogSyStateManager, Log, TEXT("UnloadOperationsBySource: No operations found matching source (Tag: %s)."), 
+            *SourceToMatch.SourceTypeTag.ToString());
+    }
+
+    return RemovedCount;
 }
 
 FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const FGameplayTag& TargetFilterTag /* TODO: 添加 SourceFilterTag */) const
@@ -240,9 +316,10 @@ bool USyStateManagerSubsystem::LoadLog()
 void USyStateManagerSubsystem::AddRecordAndBroadcast(const FSyStateModificationRecord& Record)
 {
     ModificationLog.Add(Record);
-    if (OnStateModificationRecorded.IsBound())
+    // Broadcast using the unified delegate
+    if (OnStateModificationChanged.IsBound())
     {
-        OnStateModificationRecorded.Broadcast(Record);
+        OnStateModificationChanged.Broadcast(Record);
     }
 }
 
@@ -250,7 +327,14 @@ bool USyStateManagerSubsystem::ValidateOperation(const FSyOperation& Operation) 
 {
     if (!Operation.OperationId.IsValid())
     {
+        UE_LOG(LogSyStateManager, Warning, TEXT("ValidateOperation failed: OperationId is invalid."));
         return false;
     }
+    if (!Operation.Target.TargetTypeTag.IsValid())
+    {        
+        UE_LOG(LogSyStateManager, Warning, TEXT("ValidateOperation failed: TargetTypeTag is invalid for OpId: %s."), *Operation.OperationId.ToString());
+        return false;
+    }
+    // Add more validation as needed (e.g., check source, modifier)
     return true;
 }
