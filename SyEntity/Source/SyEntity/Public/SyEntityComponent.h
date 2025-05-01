@@ -133,7 +133,7 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true"))
     TObjectPtr<USyStateComponent> StateComponent;
 
-    UPROPERTY()
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true"))
     TArray<TObjectPtr<UActorComponent>> ManagedSyComponents; // 存储所有Sy*组件的引用，便于统一管理
 
     bool bIsInitialized = false;

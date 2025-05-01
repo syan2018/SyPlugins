@@ -17,7 +17,7 @@ USyStateComponent::USyStateComponent()
     PrimaryComponentTick.bCanEverTick = false;
 }
 
-// TODO: 优化初始化时序，交由EntityComponent进行统一激活 
+// TODO: （加急！！！不然交互初始化时序会爆炸）优化初始化时序，交由EntityComponent进行统一激活 
 void USyStateComponent::BeginPlay()
 {
     Super::BeginPlay();

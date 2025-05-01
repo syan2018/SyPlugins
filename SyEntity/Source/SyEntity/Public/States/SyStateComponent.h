@@ -124,12 +124,15 @@ protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     //~ End UActorComponent Interface
 
-    /** 存储本地（初始/默认）状态数据 */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Internal", meta = (AllowPrivateAccess = "true"))
+    /** 存储本地（初始/默认）状态数据
+     *  TODO: 该字段在第二次使用时会随机丢失，拼尽全力无法战胜
+     *  不会是什么逆天GC吧不会吧不会吧
+     */
+    UPROPERTY(SaveGame, VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Internal")
     FSyStateCategories LocalStateCategories;
 
     /** 存储从 StateManager 聚合来的全局状态修改 */
-    UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Internal", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Internal")
     FSyStateCategories GlobalStateCategories;
 
 private:

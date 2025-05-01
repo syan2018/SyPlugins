@@ -3,23 +3,36 @@ description:
 globs: 
 alwaysApply: true
 ---
-
 # Unreal Plugins Cursor Rules
 
 ## 代码生成规则
 - 阅读 [README.md](mdc:README.md) 以确保对项目目标的把控
 - 编辑相应模块插件时，也可同步阅读插件对应的 README.md
 - 使用UE插件开发的最佳实践，保证高内聚低耦合
-- 生成新类时必须遵循命名前缀规范
+- 生成新类时必须遵循命名前缀规范:
+    - 类: `Sy`
+    - 接口: `ISy`
+    - 枚举: `ESy`
+    - 结构体: `FSy`
 - 自动添加必要的包含声明
 - 生成适当的导出宏
 
 
 ## 项目结构规则
-- 插件核心模块位于各自独立的目录下，注意区分
-- 注意插件所属文件路径（通常是 #PluginName#/Source/#PluginName#/Public&Private ）
+- SyPlugins 是一个模块化插件系统，核心模块位于各自独立的目录下，注意区分
+- 注意插件所属文件路径（通常是 `#PluginName#/Source/#PluginName#/Public` & `#PluginName#/Source/#PluginName#/Private` ）
 - 更新插件功能时，注意维护插件自己的 README.md
-- 存在新模块的引用时，注意维护 .uplugin 文件的正确性
+- 存在新模块的引用时，注意维护 `.uplugin`、`.Build.cs` 文件的正确性
+- **主要模块:**
+    - **SyCore:** 基础设施，提供标识符和消息总线。位于 [SyCore](mdc:SyCore)
+    - **SyStateCore:** 状态核心数据定义。位于 [SyStateCore](mdc:SyStateCore)
+    - **SyStateManager:** 状态管理中心。位于 [SyStateManager](mdc:SyStateManager)
+    - **SyOperation:** 状态操作定义。位于 [SyOperation](mdc:SyOperation)
+    - **SyEntity:** 通用实体框架。位于 [SyEntity](mdc:SyEntity)
+    - **SyFlowImpl:** Flow 插件实现。位于 [SyFlowImpl](mdc:SyFlowImpl)
+    - **SyPluginsImpl:** 插件实现示例。位于 [SyPluginsImpl](mdc:SyPluginsImpl)
+    - **SyGameplay:** 基础 Gameplay 玩法。位于 [SyGameplay](mdc:SyGameplay)
+    - **SyQuest:** (计划中) 任务系统。
 
 
 ## 重构建议
@@ -28,34 +41,8 @@ alwaysApply: true
 - 提示潜在的性能问题
 
 
-# SyPlugins Cursor Rules
-
-## 项目结构
-
-SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于构建一个以状态和数据驱动为核心思想的游戏框架。系统采用消息驱动架构和模块化设计，实现灵活且可扩展的游戏实体基础功能。
-
-当前分为 SyCore、SyEntity、SyFlowImpl 三个部分，后续可能拓展 SyQuest、SyGameplay 等模块，其中：
-
-- SyCore：系统基线，包含身份标识系统、消息系统、以及部分通用工具
-- SyEntity：整合SyCore中实现的Entity身份系统，用于统一标识和管理实体标识、实体状态等信息
-- SyFlowImpl：用于储存和管理SyPlugins的Flow插件实现，通过Flow实现信息转发、实体控制等操作
-- SyQuest：后续拓展的完整任务系统实践，待拓展
-- SyGameplay：包含常见的实体交互、玩法等实践，待拓展
-
 ## 技术规范
-
-### 命名约定
-- 类前缀: `Sy`
-- 接口前缀: `ISy`
-- 枚举前缀: `ESy`
-- 结构体前缀: `FSy`
-
-### 开发规范
 - 遵循 Unreal Engine 编码标准
-- 使用 UPROPERTY 和 UFUNCTION 确保反射
+- 使用 `UPROPERTY` 和 `UFUNCTION` 确保反射
 - 所有公共 API 必须有完整文档
 - 关键功能需要单元测试覆盖
-
-
-
-

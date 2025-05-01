@@ -57,6 +57,9 @@ private:
     FName EntityAlias;
 
     // 默认标签配置
+    // TODO: 只要更改参数就会触发实体强制重载，why baby why? 
+    // 然后想让它在实例中不能编辑 EditDefaultOnly 和 VisibleAnywhere 冲突 
+    // UE你是什么啥逼引擎？？？ 
     UPROPERTY(EditAnywhere, Category = "SyIdentity")
     FGameplayTagContainer EntityTags;
     
