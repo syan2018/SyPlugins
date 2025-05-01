@@ -9,6 +9,8 @@ README in Other Language:
 ## 项目概述
 SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于构建一个以状态驱动为核心思想的游戏框架。系统辅以消息驱动和模块化设计，实现灵活且易扩展的游戏实体基础功能。
 
+初版使用引导见： [Tutorials](Docs/Tutorials.md)
+
 
 ### 项目依赖
 

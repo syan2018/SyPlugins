@@ -1,10 +1,11 @@
 # SyPlugins - Unreal Engine Modular Event and State Management System
 
-Translated by Gemini 2.5 Pro Exp
+> Translated by Gemini 2.5 Pro Exp
 
 ## Project Overview
 SyPlugins is a modular plugin system developed for Unreal Engine, focusing on building a game framework centered around the core idea of being state-driven. The system is complemented by message-driven and modular design principles to achieve flexible and easily extensible fundamental functionalities for game entities.
 
+Tutorials in: [Tutorials](Docs/Tutorials_EN.md)
 
 ### Project Dependencies
 
