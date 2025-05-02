@@ -31,7 +31,7 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
 
 系统简要实现下述逻辑链条
 
-![Overview](Docs/Images/Overview.png)
+![Overview](Docs/assets/Overview.png)
 
 
 ## 使用参考

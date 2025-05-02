@@ -28,7 +28,7 @@ Tutorials in: [Tutorials](Docs/Tutorials_EN.md)
 
 The system briefly implements the following logic chain:
 
-![Overview](Docs/Images/Overview.png)
+![Overview](Docs/assets/Overview.png)
 
 
 ## Plugin Hierarchy
