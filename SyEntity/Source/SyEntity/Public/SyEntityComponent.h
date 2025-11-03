@@ -172,6 +172,9 @@ private:
     
     void HandleLocalStateDataChanged(); // StateComponent 内部事件处理
     void HandleEntityIdReady(); // IdentityComponent ID生成事件处理
+    
+    /** 按阶段顺序初始化所有 Sy 组件 */
+    void InitializeSyComponentsByPhase();
 };
 
 // Template implementation for FindSyComponent

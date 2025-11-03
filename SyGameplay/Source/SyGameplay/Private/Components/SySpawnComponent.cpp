@@ -15,16 +15,22 @@ USySpawnComponent::USySpawnComponent()
 void USySpawnComponent::BeginPlay()
 {
     Super::BeginPlay();
+}
 
-    // 查找并缓存StateComponent
+void USySpawnComponent::OnSyComponentInitialized()
+{
+    // 在统一初始化时才查找和绑定组件
+    // 此时所有 Sy 组件都已准备好
     FindAndCacheStateComponent();
-
-    // 如果找到StateComponent，绑定状态变化事件
+    
     if (StateComponent)
     {
+        // 绑定状态变化监听
         StateComponent->OnEffectiveStateChanged.AddUObject(this, &USySpawnComponent::HandleStateChanged);
-        // 初始状态检查
-        HandleStateChanged();
+        
+        // 状态变更会通过 OnEffectiveStateChanged 事件触发 HandleStateChanged
+        // 不需要在这里主动调用
+        UE_LOG(LogSySpawn, Log, TEXT("%s: SpawnComponent initialized and listening to state changes."), *GetNameSafe(GetOwner()));
     }
     else
     {

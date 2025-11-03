@@ -22,6 +22,15 @@ public:
 
     // 实现ISyComponentInterface接口
     virtual FName GetComponentType() const override { return TEXT("Spawn"); }
+    
+    // SpawnComponent 在功能阶段初始化
+    virtual ESyComponentInitPhase GetInitializationPhase() const override 
+    { 
+        return ESyComponentInitPhase::Functional; 
+    }
+    
+    // 由 EntityComponent 调用的初始化方法
+    virtual void OnSyComponentInitialized() override;
 
 protected:
     virtual void BeginPlay() override;

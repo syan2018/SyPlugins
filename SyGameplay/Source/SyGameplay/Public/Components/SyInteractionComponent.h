@@ -37,6 +37,15 @@ public:
 
     // --- ISyComponentInterface --- 
     virtual FName GetComponentType() const override { return TEXT("Interaction"); }
+    
+    // InteractionComponent 在功能阶段初始化
+    virtual ESyComponentInitPhase GetInitializationPhase() const override 
+    { 
+        return ESyComponentInitPhase::Functional; 
+    }
+    
+    // 由 EntityComponent 调用的初始化方法
+    virtual void OnSyComponentInitialized() override;
 
     // --- Basic Interaction Event --- 
     /** 当执行的交互类型为 Basic 时广播 */

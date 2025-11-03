@@ -33,6 +33,15 @@ public:
 
     // 实现ISyComponentInterface接口
     virtual FName GetComponentType() const override { return TEXT("State"); }
+    
+    // StateComponent 在核心阶段初始化（最先）
+    virtual ESyComponentInitPhase GetInitializationPhase() const override 
+    { 
+        return ESyComponentInitPhase::Core; 
+    }
+    
+    // 由 EntityComponent 调用，广播初始状态
+    virtual void OnSyComponentInitialized() override;
 
     // --- 状态访问 ---
     /**
@@ -155,6 +164,9 @@ private:
     /** 缓存关联的EntityComponent指针 */
     UPROPERTY(Transient)
     TObjectPtr<USyEntityComponent> EntityComponent;
+
+    /** 标记状态组件是否已完全初始化（包括默认数据和全局同步） */
+    bool bIsFullyInitialized = false;
 
     /**
      * @brief 处理从 StateManager 接收到的新状态修改记录。

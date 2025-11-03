@@ -25,21 +25,30 @@ void USyEntityComponent::OnComponentCreated()
 {
     Super::OnComponentCreated();
     
-    // 在编辑器中创建组件时，尝试初始化
-    if (!bIsInitialized)
-    {
-        InitializeEntity();
-    }
+    // 不在编辑器创建时初始化，避免重复创建组件
+    // 初始化统一在 BeginPlay 中处理
 }
 
 void USyEntityComponent::BeginPlay()
 {
     Super::BeginPlay();
     
-    // 如果尚未初始化，则调用初始化
+    // 延迟初始化到下一帧，确保所有组件的 BeginPlay 都已完成
+    // 这样可以避免组件 BeginPlay 调用顺序不确定导致的问题
     if (!bIsInitialized)
     {
-        InitializeEntity();
+        // 使用 Timer 延迟一帧
+        if (UWorld* World = GetWorld())
+        {
+            FTimerHandle TimerHandle;
+            World->GetTimerManager().SetTimerForNextTick([this]()
+            {
+                if (this && IsValid(this) && !bIsInitialized)
+                {
+                    InitializeEntity();
+                }
+            });
+        }
     }
 }
 
@@ -105,6 +114,11 @@ void USyEntityComponent::InitializeComponentsInOrder()
     
     // 4. 绑定所有组件的委托
     BindComponentDelegates();
+    
+    // 5. 按阶段顺序初始化所有 Sy 组件
+    //    Core: StateComponent 先初始化并广播初始状态
+    //    Functional: Interaction, Spawn 等功能组件接收状态并初始化
+    InitializeSyComponentsByPhase();
 }
 
 void USyEntityComponent::EnsureDependentComponents()
@@ -115,28 +129,51 @@ void USyEntityComponent::EnsureDependentComponents()
         return;
     }
 
-    // 1. 确保MessageComponent存在
+    // 1. 查找 MessageComponent（优先使用已存在的）
     if (!MessageComponent)
     {
         MessageComponent = Owner->FindComponentByClass<USyMessageComponent>();
-        if (!MessageComponent)
-        {
-            MessageComponent = NewObject<USyMessageComponent>(Owner, USyMessageComponent::StaticClass());
-            MessageComponent->RegisterComponent();
-            ManagedSyComponents.Add(MessageComponent);
-        }
+    }
+    
+    // 如果没有找到，只在运行时动态创建
+    if (!MessageComponent && Owner->GetWorld() && Owner->GetWorld()->IsGameWorld())
+    {
+        MessageComponent = NewObject<USyMessageComponent>(Owner, USyMessageComponent::StaticClass(), TEXT("SyMessageComponent"));
+        MessageComponent->RegisterComponent();
+        ManagedSyComponents.Add(MessageComponent);
     }
 
-    // 2. 确保StateComponent存在
+    // 2. 查找 StateComponent（必须在蓝图中已添加）
     if (!StateComponent)
     {
-        StateComponent = Owner->FindComponentByClass<USyStateComponent>();
-        if (!StateComponent)
+        // 使用 GetComponents 遍历查找，确保能找到所有实例
+        TArray<USyStateComponent*> StateComponents;
+        Owner->GetComponents<USyStateComponent>(StateComponents);
+        
+        if (StateComponents.Num() > 0)
         {
-            StateComponent = NewObject<USyStateComponent>(Owner, USyStateComponent::StaticClass());
-            StateComponent->RegisterComponent();
-            ManagedSyComponents.Add(StateComponent);
+            // 如果有多个，发出警告
+            if (StateComponents.Num() > 1)
+            {
+                UE_LOG(LogTemp, Error, TEXT("❌ Actor %s has %d StateComponents! This will cause problems!"), 
+                    *GetNameSafe(Owner), StateComponents.Num());
+            }
+            
+            // 使用第一个找到的
+            StateComponent = StateComponents[0];
         }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("❌ No StateComponent found on Actor %s! Please add SyStateComponent in Blueprint."), 
+                *GetNameSafe(Owner));
+        }
+    }
+    
+    // 不再动态创建 StateComponent！必须在蓝图中手动添加
+    if (!StateComponent)
+    {
+        UE_LOG(LogTemp, Error, TEXT("❌ CRITICAL: Actor %s has no StateComponent!"), 
+            *GetNameSafe(Owner));
     }
 
     // 3. 收集其他Sy系列组件
@@ -311,5 +348,55 @@ void USyEntityComponent::ApplyTemporaryStateModifications(const FSyStateParamete
     if (StateComponent)
     {
         StateComponent->ApplyTemporaryModifications(TempModifications);
+    }
+}
+
+void USyEntityComponent::InitializeSyComponentsByPhase()
+{
+    AActor* Owner = GetOwner();
+    if (!Owner)
+    {
+        return;
+    }
+
+    // 收集所有实现了 ISyComponentInterface 的组件
+    struct FSyComponentWithPhase
+    {
+        ISyComponentInterface* Component;
+        ESyComponentInitPhase Phase;
+        
+        bool operator<(const FSyComponentWithPhase& Other) const
+        {
+            // 按阶段排序，阶段值小的先初始化
+            return static_cast<uint8>(Phase) < static_cast<uint8>(Other.Phase);
+        }
+    };
+    
+    TArray<FSyComponentWithPhase> SyComponents;
+    
+    TArray<UActorComponent*> AllComponents;
+    Owner->GetComponents(AllComponents);
+    
+    for (UActorComponent* Comp : AllComponents)
+    {
+        if (Comp && Comp != this && Comp->GetClass()->ImplementsInterface(USyComponentInterface::StaticClass()))
+        {
+            if (ISyComponentInterface* SyComp = Cast<ISyComponentInterface>(Comp))
+            {
+                FSyComponentWithPhase Item;
+                Item.Component = SyComp;
+                Item.Phase = SyComp->GetInitializationPhase();
+                SyComponents.Add(Item);
+            }
+        }
+    }
+    
+    // 按阶段排序
+    SyComponents.Sort();
+    
+    // 按顺序初始化
+    for (const FSyComponentWithPhase& Item : SyComponents)
+    {
+        Item.Component->OnSyComponentInitialized();
     }
 } 

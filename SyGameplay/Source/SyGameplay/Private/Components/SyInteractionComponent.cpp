@@ -21,14 +21,23 @@ void USyInteractionComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    FindAndCacheComponents();
-
     OnUsed.AddDynamic(this, &USyInteractionComponent::HandleInteractionRequest);
+}
 
+void USyInteractionComponent::OnSyComponentInitialized()
+{
+    // 在统一初始化时才查找和绑定组件
+    // 此时所有 Sy 组件都已准备好
+    FindAndCacheComponents();
+    
     if (CachedStateComponent)
     {
+        // 绑定状态变化监听
         CachedStateComponent->OnEffectiveStateChanged.AddUObject(this, &USyInteractionComponent::HandleStateChanged);
-        HandleStateChanged();
+        
+        // 状态变更会通过 OnEffectiveStateChanged 事件触发 HandleStateChanged
+        // 不需要在这里主动调用
+        UE_LOG(LogSyInteraction, Log, TEXT("Actor %s: InteractionComponent initialized and listening to state changes."), *GetNameSafe(GetOwner()));
     }
     else
     {
@@ -54,16 +63,26 @@ void USyInteractionComponent::FindAndCacheComponents()
         return;
     }
 
-    CachedStateComponent = Owner->FindComponentByClass<USyStateComponent>();
-    if (!CachedStateComponent)
-    {
-        UE_LOG(LogSyInteraction, Warning, TEXT("Actor %s: InteractionComponent could not find StateComponent."), *GetNameSafe(Owner));
-    }
-
+    // 先查找 EntityComponent
     CachedEntityComponent = Owner->FindComponentByClass<USyEntityComponent>();
     if (!CachedEntityComponent)
     {
         UE_LOG(LogSyInteraction, Warning, TEXT("Actor %s: InteractionComponent could not find EntityComponent."), *GetNameSafe(Owner));
+        return;
+    }
+
+    // 从 EntityComponent 获取 StateComponent（确保是同一个）
+    CachedStateComponent = CachedEntityComponent->GetStateComponent();
+    if (CachedStateComponent)
+    {
+        UE_LOG(LogSyInteraction, Log, TEXT("Actor %s: InteractionComponent cached StateComponent (Address: %p, Name: %s)"), 
+            *GetNameSafe(Owner), 
+            CachedStateComponent.Get(),
+            *CachedStateComponent->GetName());
+    }
+    else
+    {
+        UE_LOG(LogSyInteraction, Warning, TEXT("Actor %s: InteractionComponent could not get StateComponent from EntityComponent."), *GetNameSafe(Owner));
     }
 }
 

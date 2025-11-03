@@ -15,29 +15,64 @@ DEFINE_LOG_CATEGORY_STATIC(LogSyStateComponent, Log, All); // 添加日志分类
 USyStateComponent::USyStateComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
+    bIsFullyInitialized = false;
 }
 
-// TODO: （加急！！！不然交互初始化时序会爆炸）优化初始化时序，交由EntityComponent进行统一激活 
 void USyStateComponent::BeginPlay()
 {
     Super::BeginPlay();
 
+    // 检查是否有重复的 StateComponent
+    if (AActor* Owner = GetOwner())
+    {
+        TArray<USyStateComponent*> AllStateComps;
+        Owner->GetComponents<USyStateComponent>(AllStateComps);
+        if (AllStateComps.Num() > 1)
+        {
+            UE_LOG(LogSyStateComponent, Error, TEXT("❌ Actor %s has %d StateComponents! Please check Construction Script."), 
+                *GetNameSafe(Owner), AllStateComps.Num());
+        }
+    }
+
     // 查找并缓存EntityComponent
     FindAndCacheEntityComponent();
 
-    // Apply default init data to LocalState ONLY
-    ApplyInitializationData(DefaultInitData); 
+    // 应用默认初始化数据到本地状态，但暂不广播
+    // 广播将在 OnSyComponentInitialized() 中进行，确保所有组件都准备好
+    UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applying initialization data to Default layer (no broadcast yet)."), *GetNameSafe(GetOwner()));
+    LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Default, DefaultInitData);
 
+    // 如果启用全局同步，连接到 StateManager 并应用全局状态
     if (bEnableGlobalSync)
     {
         TryConnectToStateManager();
         if (StateManagerSubsystem)
         {
-            ApplyAggregatedModifications(); // Apply initial global state
+            ApplyAggregatedModifications(); // Apply initial global state (这里会调用 Broadcast)
         }
-        else { UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Could not connect to StateManagerSubsystem on BeginPlay."), *GetNameSafe(GetOwner())); }
+        else 
+        { 
+            UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Could not connect to StateManagerSubsystem on BeginPlay."), *GetNameSafe(GetOwner())); 
+        }
     }
-    else { UE_LOG(LogSyStateComponent, Log, TEXT("%s: Global sync is disabled."), *GetNameSafe(GetOwner())); }
+    else 
+    { 
+        UE_LOG(LogSyStateComponent, Log, TEXT("%s: Global sync is disabled."), *GetNameSafe(GetOwner())); 
+    }
+    
+    // 标记为已完全初始化（数据已应用，但还不会触发依赖组件的初始化）
+    bIsFullyInitialized = true;
+}
+
+void USyStateComponent::OnSyComponentInitialized()
+{
+    // StateComponent 作为核心组件，在此处最终广播初始化完成
+    // 这确保了监听 OnEffectiveStateChanged 的组件能在正确的时机收到通知
+    if (bIsFullyInitialized)
+    {
+        UE_LOG(LogSyStateComponent, Log, TEXT("%s: StateComponent fully initialized, broadcasting initial state."), *GetNameSafe(GetOwner()));
+        OnEffectiveStateChanged.Broadcast();
+    }
 }
 
 void USyStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -89,8 +124,11 @@ void USyStateComponent::ApplyInitializationData(const FSyStateParameterSet& Init
     // 应用到默认层
     LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Default, InitData);
 
-    // Broadcast that the effective state has changed
-    OnEffectiveStateChanged.Broadcast();
+    // Broadcast that the effective state has changed (只有在完全初始化后才广播)
+    if (bIsFullyInitialized)
+    {
+        OnEffectiveStateChanged.Broadcast();
+    }
 }
 
 void USyStateComponent::ApplyTemporaryModifications(const FSyStateParameterSet& TempModifications)
@@ -225,7 +263,10 @@ void USyStateComponent::ApplyAggregatedModifications()
     UE_LOG(LogSyStateComponent, Verbose, TEXT("%s: Applied aggregated modifications to Persistent layer for Tag %s."), 
         *GetNameSafe(GetOwner()), *CurrentTargetTag.ToString());
 
-    // Broadcast that the effective state definitely changed
-    OnEffectiveStateChanged.Broadcast();
+    // Broadcast that the effective state definitely changed (只有在完全初始化后才广播)
+    if (bIsFullyInitialized)
+    {
+        OnEffectiveStateChanged.Broadcast();
+    }
 }
 
