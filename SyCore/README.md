@@ -19,10 +19,11 @@ SyCore 是 SyPlugins 框架的最基础模块，定义了全局共享的 Gamepla
     *   实现：通常通过 `SyIdentityComponent`。
     *   功能：管理实体的唯一 `FGuid` 和可选的 `FName` 别名。
 *   **MessageBus (消息总线):**
-    *   实现：包含消息组件（如 `SyMessagingComponent`）和中央总线逻辑。
-    *   消息结构：
-        *   **来源:** 来源身份GameplayTag + 来源标识 (`FGuid`, 别名)。
-        *   **内容:** 消息类型GameplayTag + 具体内容信息（计划使用 `TagMetadata` 定义与Tag关联的内容结构）。
+    *   实现：包含消息组件（如 `SyMessageComponent`）和中央总线逻辑（`USyMessageBus`）。
+    *   消息结构 (`FSyMessage`)：
+        *   **来源 (`FSyMessageSource`):** 来源身份GameplayTag + 来源标识 (`FGuid`, 别名)。
+        *   **内容 (`FSyMessageContent`):** 消息类型GameplayTag + `FInstancedStruct` Payload（支持任意结构化数据）+ 可选元数据键值对。
+        *   **元信息:** 时间戳、优先级 (`ESyMessagePriority`)、消息唯一ID。
     *   用途：主要用于事件驱动的逻辑解耦，如 Flow 监听特定消息。
 *   **(Future) `ISyModuleInterface`:** (如果需要) 定义 SyPlugins 模块通用的接口规范。
 
@@ -69,7 +70,8 @@ SyCore/
 *   `Core`
 *   `CoreUObject`
 *   `GameplayTags`
-*   `TagMetadata` (用于消息内容定义和基础功能暴露)
+*   `StructUtils` (用于 `FInstancedStruct` 支持)
+*   `TagMetadata` (用于基础功能暴露，可选)
 
 ## 使用建议与最佳实践 (Usage Notes/Guidelines)
 

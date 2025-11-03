@@ -32,69 +32,85 @@ The system briefly implements the following logic chain:
 
 
 ## Plugin Hierarchy
-1.  **SyCore**
-    - The infrastructure module of the system.
-    - Provides a unique identifier system for entities (Identifier).
-    - Implements a message bus for inter-module communication (MessageBus).
-    - Defines some core data structures.
-    - Serves as the base dependency for all other SyPlugins modules.
 
-2.  **SyStateCore**
-    - The core definition module for the state system.
-    - Defines the data structure for entity states (`FSyEntityState`).
-    - Provides state initialization configuration (`FSyEntityInitData`).
-    - Defines various state metadata classes (extending `UO_TagMetadata`).
-    - Provides interfaces for accessing state data.
+1. **SyCore**
+   - The infrastructure module of the system
+   - Provides a unique identifier system for entities (Identifier)
+   - Implements a message bus for inter-module communication (MessageBus)
+   - Defines core data structures
+   - Serves as the base dependency for all other SyPlugins modules
 
-3.  **SyStateManager**
-    - The centralized module for state management.
-    - Provides mechanisms for recording and distributing state changes.
-    - Implements the authoritative source for state synchronization.
-    - Manages state modification records (`FSyStateModificationRecord`).
-    - Provides state querying and event notification.
+2. **SyStateSystem** (Unified State Management System, integrating former SyStateCore, SyOperation, SyStateManager)
+   - **Core Subsystem**: Core data definitions for the state system
+     - Defines entity state data structures (FSyStateCategories)
+     - Provides editor configuration support for states (FSyStateParameterSet)
+     - Defines various state metadata classes (extending UO_TagMetadata)
+     - Supports layered state management (FSyLayeredStateContainer)
+   - **Operations Subsystem**: State operation definitions
+     - Defines state change operation data structures (FSyOperation)
+     - Provides parameter Schema system
+     - Implements common parameter structures
+     - Supports editor configuration and validation
+   - **Manager Subsystem**: State management center
+     - Provides state change recording and distribution mechanisms
+     - Implements the authoritative source for state synchronization
+     - Manages state modification records (FSyStateModificationRecord)
+     - Provides state querying and event notification
+     - Smart subscription and performance optimization
 
-4.  **SyOperation**
-    - The state operation definition module.
-    - Defines data structures for state change operations.
-    - Provides a parameter schema system.
-    - Implements common parameter structures.
-    - Supports editor configuration and validation.
+3. **SyEntity**
+   - Generic entity framework module
+   - Provides component-based entity management framework
+   - Implements entity state management (via SyStateComponent)
+   - Supports non-intrusive Actor extension
+   - Provides entity registration and querying functions
 
-5.  **SyEntity**
-    - The generic entity framework module.
-    - Provides a component-based entity management framework.
-    - Implements entity state management (via `SyStateComponent`).
-    - Supports non-intrusive Actor extension.
-    - Provides entity registration and querying functions.
+4. **SyFlowImpl**
+   - Flow plugin implementation module
+   - Provides graphical nodes for SyPlugins functionalities
+   - Implements Flow node integration for the message system
+   - Provides state operation nodes
+   - Provides interaction system nodes
+   - Makes SyPlugins functionalities easier to compose and use
 
-6.  **SyFlowImpl**
-    - The Flow plugin implementation module.
-    - Provides graphical nodes for SyPlugins functionalities.
-    - Implements Flow node integration for the message system.
-    - Supports Flow nodes for entity control (planned).
-    - Makes SyPlugins functionalities easier to compose and use.
+5. **SyGameplay**
+   - Basic Gameplay framework module
+   - Builds on top of SyEntity for specific game interaction systems
+   - Provides entity interaction and other high-level functionalities
+   - Currently implements triggers, generic interactions, spawn system, etc.
 
-7.  **SyPluginsImpl**
-    - The plugin implementation example module.
-    - Consolidates structures like `GameplayTag` used in examples.
-    - Provides references for specific function implementations.
-    - Demonstrates integration methods between modules.
+6. **SyQuest** (Planned)
+   - Quest system implementation (iterating on current FlowExtension implementation)
+   - Achieves unified quest updates based on states, triggers, and listeners
+   - Provides quest logic and state management
+   - Includes importing and refactoring the TagFacts system
 
-8.  **SyGameplay**
-    - The basic Gameplay framework module.
-    - Builds specific game interaction systems on top of `SyEntity`.
-    - Provides higher-level functionalities like entity interaction.
-    - Currently implements simple triggers, generic interactions, etc.
-
-9.  **SyQuest** (Planned)
-    - Quest system implementation (iterating on the current FlowExtension implementation).
-    - Achieves unified quest updates based on states, triggers, and listeners.
-    - Provides quest logic and state management.
-    - Includes importing and refactoring the TagFacts system.
+7. **SyPluginsImpl**
+   - Plugin implementation example module
+   - Consolidates structures like GameplayTag used in examples
+   - Provides references for specific function implementations
+   - Demonstrates integration methods between modules
 
 Detailed introductions for each module can be found in their respective README.md files. Please forgive if the project structure seems overly granular.
 
+## Usage Reference
 
-## TODO
+[Tutorials](Docs/Tutorials_EN.md)
 
-(To be organized)
+## Project Origin
+
+(Personal Reflections)
+
+The project's ideas originated from a framework designed for single-player games at my previous company, which, due to some unexpected changes, was not properly implemented. The initial core concepts were **layered logic management** and **message bus**.
+
+1. At the game level, separate process logic and object logic into hierarchical layers
+2. Build clear message passing chains between layers, communicating based on entity identity
+
+Over the past year, while designing quest systems for online games and accumulating (failed) work experience, I further introduced **entity and componentization**, **state management**, and some degree of frontend-backend separation design support.
+
+1. Identify game objects based on entity identifiers
+2. Implement logic presentation for different states based on logic components
+3. Pursue centralized management of entity states with source tracking, lifecycle management, conflict resolution, etc.
+4. (To be implemented) Frontend-backend layering and maintenance of logic
+
+After consolidating these ideas, the design approach for game quests and level foundations gradually became clear. As a friend was working on a demo for pitching, I assisted in building this framework. Combined with my recent resignation to pursue AI entrepreneurship, I wrote this thing with Cursor, practicing Vibe Coding engineering habits while leaving a fallback for my TD career. Isn't that wonderful?

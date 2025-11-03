@@ -6,7 +6,10 @@ SyFlowImpl是一个Unreal Engine插件，用于提供SyPlugins各个功能模块
 ## 依赖项
 - Flow Plugin
 - SyCore Plugin
+- SyStateSystem Plugin
+- SyGameplay Plugin
 - GameplayTags
+- StructUtils
 
 ## 功能模块
 
@@ -35,11 +38,38 @@ SyFlowImpl是一个Unreal Engine插件，用于提供SyPlugins各个功能模块
   - 输出：完整消息内容
   - 使用场景：精确消息匹配
 
-### 2. 实体控制 (Entity Control)
-> 待实现的模块，用于管理和控制游戏实体。
+### 2. 状态操作系统 (State Operations)
+实现与SyStateSystem状态管理的集成，提供状态操作记录的Flow节点。
 
-### 3. [未来模块名称]
-> 预留给未来可能添加的功能模块。
+#### 核心组件
+- **StateOperationBase节点** (`USyFlowNode_StateOperationBase`)
+  - 提供状态操作的基础框架
+  - 统一的操作记录和卸载机制
+  - 可扩展的Source和Modifier系统
+
+#### 可用节点
+- **ApplyStateOperation_Simple节点**
+  - 功能：应用简单的状态操作
+  - 配置：目标类型、修改参数
+  - 使用场景：通用状态变更
+
+- **Setup Interaction节点** (`USyFlowNode_SetupInteraction`)
+  - 功能：设置实体交互状态
+  - 配置：启用交互、设置交互信息
+  - 使用场景：配置可交互对象
+
+### 3. 交互系统 (Interaction System)
+实现与SyGameplay交互组件的集成，提供交互控制的Flow节点。
+
+#### 可用节点
+- **Setup Interaction节点**
+  - 功能：设置实体的交互状态和信息
+  - 配置：交互内容（支持Flow类型和Basic类型）
+  - 使用场景：启用NPC交互、触发点交互等
+
+- **Send Interaction End Event节点** (`USyFlowNode_SendInteractionEndEvent`)
+  - 功能：发送交互结束事件
+  - 使用场景：标记交互流程完成
 
 ## 使用指南
 
@@ -65,11 +95,35 @@ SyFlowImpl是一个Unreal Engine插件，用于提供SyPlugins各个功能模块
    - 及时清理无用监听
    - 保持处理逻辑简洁
 
-#### 实体控制使用
-> 待补充
+#### 状态操作使用
+1. **节点创建**
+   - 在Flow图中选择 "SyPlugin|StateOp" 分类
+   - 选择合适的操作节点
 
-#### [未来模块] 使用
-> 待补充
+2. **基础配置**
+   - 配置操作目标（TargetTypeTag）
+   - 设置状态修改参数
+   - 连接In/Out/Unload流程
+
+3. **最佳实践**
+   - 使用Setup Interaction节点快速配置交互
+   - 使用Unload pin撤销状态操作
+   - 保持操作原子性
+
+#### 交互系统使用
+1. **节点创建**
+   - 在Flow图中选择 "SyPlugin|Interaction" 分类
+   - 配置交互信息结构
+
+2. **基础配置**
+   - 选择交互类型（Flow或Basic）
+   - 配置交互内容
+   - 连接控制流
+
+3. **最佳实践**
+   - Flow类型用于复杂对话和任务
+   - Basic类型用于简单触发
+   - 及时发送交互结束事件
 
 ## 开发指南
 
@@ -96,15 +150,22 @@ SyFlowImpl是一个Unreal Engine插件，用于提供SyPlugins各个功能模块
 - 作者：Syan
 
 ## 更新日志
+### v1.1 (2025-11)
+- 新增状态操作系统节点
+- 新增交互系统节点
+- 实现Setup Interaction节点
+- 实现Send Interaction End Event节点
+
 ### v1.0
 - 实现消息系统基础功能
 - 提供三种消息监听节点
 - 建立基础框架结构
 
 ## 路线图
-- [ ] 实现实体控制模块
+- [ ] 添加更多状态操作快捷节点
+- [ ] 实现实体查询和控制节点
 - [ ] 添加更多消息处理功能
-- [ ] [其他计划中的功能]
+- [ ] 完善状态操作的撤销机制
 
 ## 贡献指南
 1. 遵循模块化结构
