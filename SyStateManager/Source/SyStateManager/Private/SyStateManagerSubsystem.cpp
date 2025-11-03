@@ -73,6 +73,10 @@ bool USyStateManagerSubsystem::RecordOperation(const FSyOperation& Operation)
     }
     
     // 6. 广播事件
+    // 6.1 精准广播给智能订阅者（推荐方式）
+    BroadcastToSubscribers(NewRecord);
+    
+    // 6.2 全局广播（用于蓝图或需要监听所有变更的场景）
     if (OnStateModificationChanged.IsBound())
     {
         OnStateModificationChanged.Broadcast(NewRecord);
@@ -445,4 +449,189 @@ bool USyStateManagerSubsystem::ValidateOperation(const FSyOperation& Operation) 
     }
     // Add more validation as needed (e.g., check source, modifier)
     return true;
+}
+
+// ===== 智能订阅实现 =====
+
+void USyStateManagerSubsystem::SubscribeToTargetType(
+    FGameplayTag TargetTypeTag, 
+    UObject* Subscriber,
+    FOnStateModificationChangedNative Delegate)
+{
+    if (!TargetTypeTag.IsValid())
+    {
+        UE_LOG(LogSyStateManager, Warning, TEXT("SubscribeToTargetType: Invalid TargetTypeTag"));
+        return;
+    }
+    
+    if (!Subscriber)
+    {
+        UE_LOG(LogSyStateManager, Warning, TEXT("SubscribeToTargetType: Null Subscriber"));
+        return;
+    }
+    
+    if (!Delegate.IsBound())
+    {
+        UE_LOG(LogSyStateManager, Warning, TEXT("SubscribeToTargetType: Delegate not bound"));
+        return;
+    }
+    
+    TArray<FSubscriberInfo>& Subscribers = TargetTypeSubscribers.FindOrAdd(TargetTypeTag);
+    
+    // 检查是否已经订阅
+    for (const FSubscriberInfo& Info : Subscribers)
+    {
+        if (Info.Subscriber == Subscriber)
+        {
+            UE_LOG(LogSyStateManager, Verbose, TEXT("Subscriber %s already subscribed to target type: %s"), 
+                *Subscriber->GetName(), *TargetTypeTag.ToString());
+            return;
+        }
+    }
+    
+    Subscribers.Add(FSubscriberInfo(Subscriber, Delegate));
+    
+    UE_LOG(LogSyStateManager, Log, TEXT("✅ Subscriber %s subscribed to target type: %s"), 
+        *Subscriber->GetName(), *TargetTypeTag.ToString());
+}
+
+void USyStateManagerSubsystem::UnsubscribeFromTargetType(FGameplayTag TargetTypeTag, UObject* Subscriber)
+{
+    if (!TargetTypeTag.IsValid() || !Subscriber)
+    {
+        return;
+    }
+    
+    TArray<FSubscriberInfo>* SubscribersPtr = TargetTypeSubscribers.Find(TargetTypeTag);
+    if (!SubscribersPtr)
+    {
+        return;
+    }
+    
+    int32 RemovedCount = SubscribersPtr->RemoveAll([Subscriber](const FSubscriberInfo& Info)
+    {
+        return Info.Subscriber == Subscriber;
+    });
+    
+    if (RemovedCount > 0)
+    {
+        UE_LOG(LogSyStateManager, Log, TEXT("Unsubscribed %s from target type: %s"), 
+            *Subscriber->GetName(), *TargetTypeTag.ToString());
+        
+        // 如果该目标类型没有订阅者了，移除整个条目
+        if (SubscribersPtr->Num() == 0)
+        {
+            TargetTypeSubscribers.Remove(TargetTypeTag);
+        }
+    }
+}
+
+void USyStateManagerSubsystem::UnsubscribeAll(UObject* Subscriber)
+{
+    if (!Subscriber)
+    {
+        return;
+    }
+    
+    int32 TotalRemovedCount = 0;
+    TArray<FGameplayTag> EmptyTags;
+    
+    for (auto& Pair : TargetTypeSubscribers)
+    {
+        int32 RemovedCount = Pair.Value.RemoveAll([Subscriber](const FSubscriberInfo& Info)
+        {
+            return Info.Subscriber == Subscriber;
+        });
+        
+        TotalRemovedCount += RemovedCount;
+        
+        if (Pair.Value.Num() == 0)
+        {
+            EmptyTags.Add(Pair.Key);
+        }
+    }
+    
+    // 移除空的订阅列表
+    for (const FGameplayTag& Tag : EmptyTags)
+    {
+        TargetTypeSubscribers.Remove(Tag);
+    }
+    
+    if (TotalRemovedCount > 0)
+    {
+        UE_LOG(LogSyStateManager, Log, TEXT("Unsubscribed %s from all target types (removed %d subscriptions)"), 
+            *Subscriber->GetName(), TotalRemovedCount);
+    }
+}
+
+void USyStateManagerSubsystem::BroadcastToSubscribers(const FSyStateModificationRecord& Record)
+{
+    const FGameplayTag& TargetTag = Record.Operation.Target.TargetTypeTag;
+    if (!TargetTag.IsValid())
+    {
+        return;
+    }
+    
+    TArray<FSubscriberInfo>* SubscribersPtr = TargetTypeSubscribers.Find(TargetTag);
+    if (!SubscribersPtr || SubscribersPtr->Num() == 0)
+    {
+        return;
+    }
+    
+    // 清理无效订阅者
+    int32 InvalidCount = SubscribersPtr->RemoveAll([](const FSubscriberInfo& Info)
+    {
+        return !Info.IsValid();
+    });
+    
+    if (InvalidCount > 0)
+    {
+        UE_LOG(LogSyStateManager, Verbose, TEXT("Cleaned up %d invalid subscribers for target type: %s"), 
+            InvalidCount, *TargetTag.ToString());
+    }
+    
+    // 广播给有效的订阅者
+    int32 BroadcastCount = 0;
+    for (const FSubscriberInfo& Info : *SubscribersPtr)
+    {
+        if (Info.IsValid() && Info.Delegate.IsBound())
+        {
+            Info.Delegate.Execute(Record);
+            BroadcastCount++;
+        }
+    }
+    
+    UE_LOG(LogSyStateManager, VeryVerbose, TEXT("📢 Broadcasted to %d subscribers for target type: %s"), 
+        BroadcastCount, *TargetTag.ToString());
+}
+
+void USyStateManagerSubsystem::CleanupInvalidSubscribers()
+{
+    int32 TotalCleaned = 0;
+    TArray<FGameplayTag> EmptyTags;
+    
+    for (auto& Pair : TargetTypeSubscribers)
+    {
+        int32 CleanedCount = Pair.Value.RemoveAll([](const FSubscriberInfo& Info)
+        {
+            return !Info.IsValid();
+        });
+        
+        TotalCleaned += CleanedCount;
+        
+        if (Pair.Value.Num() == 0)
+        {
+            EmptyTags.Add(Pair.Key);
+        }
+    }
+    
+    for (const FGameplayTag& Tag : EmptyTags)
+    {
+        TargetTypeSubscribers.Remove(Tag);
+    }
+    
+    if (TotalCleaned > 0)
+    {
+        UE_LOG(LogSyStateManager, Log, TEXT("🧹 Cleaned up %d invalid subscribers"), TotalCleaned);
+    }
 }

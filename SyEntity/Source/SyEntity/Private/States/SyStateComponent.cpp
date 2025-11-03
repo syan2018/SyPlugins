@@ -151,40 +151,48 @@ void USyStateComponent::TryConnectToStateManager()
     StateManagerSubsystem = GameInstance->GetSubsystem<USyStateManagerSubsystem>();
     if (StateManagerSubsystem)
     {
-        StateManagerSubsystem->OnStateModificationChanged.AddDynamic(this, &USyStateComponent::HandleStateModificationChanged);
-        UE_LOG(LogSyStateComponent, Log, TEXT("%s: Connected to StateManagerSubsystem."), *GetNameSafe(GetOwner()));
+        FGameplayTag TargetTag = GetTargetTypeTag();
+        if (!TargetTag.IsValid())
+        {
+            UE_LOG(LogSyStateComponent, Error, TEXT("%s: Cannot subscribe to StateManager - TargetTag is invalid. Entity needs valid tags!"), 
+                *GetNameSafe(GetOwner()));
+            return;
+        }
+        
+        // 使用智能订阅（只订阅相关的目标类型）
+        FOnStateModificationChangedNative Delegate;
+        Delegate.BindUObject(this, &USyStateComponent::HandleStateModificationChanged);
+        
+        StateManagerSubsystem->SubscribeToTargetType(TargetTag, this, Delegate);
+        UE_LOG(LogSyStateComponent, Log, TEXT("%s: ✅ Subscribed to StateManager for target type: %s"), 
+            *GetNameSafe(GetOwner()), *TargetTag.ToString());
     }
-    else { UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Failed to get StateManagerSubsystem."), *GetNameSafe(GetOwner())); }
+    else 
+    { 
+        UE_LOG(LogSyStateComponent, Error, TEXT("%s: Failed to get StateManagerSubsystem."), *GetNameSafe(GetOwner())); 
+    }
 }
 
 void USyStateComponent::DisconnectFromStateManager()
 {
-    // 仅当 StateManagerSubsystem 有效时才尝试解绑
     if (StateManagerSubsystem)
     {
-        // 解绑 StateManager 的事件 (使用 RemoveDynamic)
-        StateManagerSubsystem->OnStateModificationChanged.RemoveDynamic(this, &USyStateComponent::HandleStateModificationChanged);
-        UE_LOG(LogSyStateComponent, Log, TEXT("%s: Disconnected from StateManagerSubsystem."), *GetNameSafe(GetOwner()));
+        // 取消所有智能订阅
+        StateManagerSubsystem->UnsubscribeAll(this);
+        
+        UE_LOG(LogSyStateComponent, Log, TEXT("%s: 🔌 Disconnected from StateManagerSubsystem."), *GetNameSafe(GetOwner()));
     }
-    // 不需要手动将 StateManagerSubsystem 设为 nullptr，因为它是 TObjectPtr，会自动处理
 }
 
 void USyStateComponent::HandleStateModificationChanged(const FSyStateModificationRecord& ChangedRecord)
 {
-     if (!StateManagerSubsystem || !bEnableGlobalSync) return;
+    if (!StateManagerSubsystem || !bEnableGlobalSync) return;
 
-     FGameplayTag CurrentTargetTag = GetTargetTypeTag();
-     if (!CurrentTargetTag.IsValid()) return;
-
-     // Re-aggregate if the change potentially affects this component's target type
-     // A simple check: if the record's target matches our target type.
-     // A more robust check might be needed if operations can indirectly affect targets.
-     if (ChangedRecord.Operation.Target.TargetTypeTag.MatchesTag(CurrentTargetTag))
-     {
-         UE_LOG(LogSyStateComponent, Verbose, TEXT("%s: Relevant state modification changed (OpID: %s). Re-applying aggregated modifications."),
-             *GetNameSafe(GetOwner()), *ChangedRecord.Operation.OperationId.ToString());
-         ApplyAggregatedModifications(); 
-     }
+    // 智能订阅已过滤不相关记录，直接应用
+    UE_LOG(LogSyStateComponent, VeryVerbose, TEXT("%s: 📨 Received state modification (OpID: %s). Re-applying aggregated modifications."),
+        *GetNameSafe(GetOwner()), *ChangedRecord.Operation.OperationId.ToString());
+     
+    ApplyAggregatedModifications();
 }
 
 void USyStateComponent::ApplyAggregatedModifications()

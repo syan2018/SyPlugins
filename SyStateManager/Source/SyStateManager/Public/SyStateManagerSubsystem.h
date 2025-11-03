@@ -21,11 +21,12 @@ struct FSyOperation;
 /**
  * @brief 状态修改记录发生变化（添加或移除）时的委托
  * @param ChangedRecord 发生变化的记录
- * @param bIsAddition 如果是添加记录则为 true，如果是移除记录则为 false (或者可以只传记录本身，由监听者判断)
  */
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStateModificationChanged, const FSyStateModificationRecord&, ChangedRecord, bool, bIsAddition);
-// Simpler approach: Just broadcast the record, listeners can check the log if needed.
+// 动态多播委托 - 用于蓝图和全局广播
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStateModificationChanged, const FSyStateModificationRecord&, ChangedRecord);
+
+// 普通委托 - 用于 C++ 智能订阅（支持 Bind 和 Execute）
+DECLARE_DELEGATE_OneParam(FOnStateModificationChangedNative, const FSyStateModificationRecord&);
 
 /**
  * @brief 状态管理器子系统 (Game Instance Subsystem)
@@ -93,9 +94,39 @@ public:
 
     // --- Events --- 
 
-    /** 当状态修改被记录或卸载时广播 */
+    /** 当状态修改被记录或卸载时广播（全局事件，用于蓝图或需要监听所有变更的场景）
+     *  C++ 代码建议使用 SubscribeToTargetType 进行精准订阅以获得更好的性能
+     */
     UPROPERTY(BlueprintAssignable, Category="State Management|Events", meta=(DisplayName="On State Modification Changed"))
     FOnStateModificationChanged OnStateModificationChanged;
+    
+    // ===== 智能订阅接口 =====
+    
+    /**
+     * @brief 订阅特定目标类型的状态修改（C++ 使用）
+     * @param TargetTypeTag 要订阅的目标类型标签
+     * @param Subscriber 订阅者对象
+     * @param Delegate 回调委托（普通委托，支持 Bind）
+     */
+    void SubscribeToTargetType(
+        FGameplayTag TargetTypeTag, 
+        UObject* Subscriber,
+        FOnStateModificationChangedNative Delegate);
+    
+    /**
+     * @brief 取消订阅特定目标类型的状态修改
+     * @param TargetTypeTag 目标类型标签
+     * @param Subscriber 订阅者对象
+     */
+    UFUNCTION(BlueprintCallable, Category="State Management|Subscription")
+    void UnsubscribeFromTargetType(FGameplayTag TargetTypeTag, UObject* Subscriber);
+    
+    /**
+     * @brief 取消订阅者的所有订阅
+     * @param Subscriber 订阅者对象
+     */
+    UFUNCTION(BlueprintCallable, Category="State Management|Subscription")
+    void UnsubscribeAll(UObject* Subscriber);
 
     // --- Persistence --- 
 
@@ -141,6 +172,26 @@ private:
     
     /** 全局版本号 - 每次记录操作时递增 */
     int32 GlobalVersion = 0;
+    
+    // ===== 智能订阅数据结构 =====
+    
+    /** 订阅者信息 */
+    struct FSubscriberInfo
+    {
+        TWeakObjectPtr<UObject> Subscriber;
+        FOnStateModificationChangedNative Delegate;  // 使用普通委托
+        
+        FSubscriberInfo() = default;
+        FSubscriberInfo(UObject* InSubscriber, FOnStateModificationChangedNative InDelegate)
+            : Subscriber(InSubscriber)
+            , Delegate(InDelegate)
+        {}
+        
+        bool IsValid() const { return Subscriber.IsValid() && Delegate.IsBound(); }
+    };
+    
+    /** 按目标类型分组的订阅者 - 精准广播 */
+    TMap<FGameplayTag, TArray<FSubscriberInfo>> TargetTypeSubscribers;
 
     /** 定义存档槽位名称 */
     inline static const FString SaveSlotName = TEXT("SyStateManagerLog");
@@ -168,6 +219,17 @@ private:
     void AggregateRecordModifications(
         const FSyStateModificationRecord& Record,
         TMap<FGameplayTag, TArray<FInstancedStruct>>& OutAggregatedMap) const;
+    
+    /**
+     * @brief 精准广播状态修改事件给相关订阅者
+     * @param Record 状态修改记录
+     */
+    void BroadcastToSubscribers(const FSyStateModificationRecord& Record);
+    
+    /**
+     * @brief 清理无效的订阅者（在订阅列表中定期调用）
+     */
+    void CleanupInvalidSubscribers();
 
     // TODO: [拓展] 日志管理
     // - 日志大小限制与清理策略
