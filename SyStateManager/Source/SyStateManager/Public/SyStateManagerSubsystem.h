@@ -219,6 +219,13 @@ private:
     void AggregateRecordModifications(
         const FSyStateModificationRecord& Record,
         TMap<FGameplayTag, TArray<FInstancedStruct>>& OutAggregatedMap) const;
+
+    /**
+     * @brief 重新计算指定目标类型的聚合快照
+     * @param TargetTag 目标类型标签
+     * @note 用于卸载操作后刷新快照
+     */
+    void RecalculateSnapshotForTarget(const FGameplayTag& TargetTag);
     
     /**
      * @brief 精准广播状态修改事件给相关订阅者

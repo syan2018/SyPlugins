@@ -3,8 +3,11 @@
 #include "SyCore/Public/Messaging/SyMessageComponent.h"
 #include "Registry/SyEntityRegistry.h"
 #include "States/SyStateComponent.h"
+#include "SyStateManager/Public/SyStateManagerSubsystem.h"
+#include "SyOperation/Public/OperationTypes.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 
 
 USyEntityComponent::USyEntityComponent()
@@ -59,14 +62,22 @@ void USyEntityComponent::InitializeEntity(bool bForceReinitialization)
         return;
     }
     
-    
+    // Phase 1: 创建和注册所有依赖组件
     EnsureDependentComponents();
     
+    // Phase 2: 按依赖顺序初始化组件
+    InitializeComponentsInOrder();
     
-    // 绑定组件委托
-    BindComponentDelegates();
+    // 注册到Registry
+    RegisterWithRegistry();
     
-    // 处理 Identity
+    // 标记为已初始化
+    bIsInitialized = true;
+}
+
+void USyEntityComponent::InitializeComponentsInOrder()
+{
+    // 1. 初始化 Identity 组件（无依赖）
     if (IdentityComponent)
     {
         IdentityComponent->GenerateEntityId();
@@ -78,11 +89,22 @@ void USyEntityComponent::InitializeEntity(bool bForceReinitialization)
         }
     }
     
-    // 注册到Registry
-    RegisterWithRegistry();
+    // 2. 初始化 Message 组件（依赖 Identity）
+    if (MessageComponent && IdentityComponent)
+    {
+        // MessageComponent 已经在 BeginPlay 中会自动获取 Identity
+        // 这里可以添加额外的初始化逻辑（如果需要）
+    }
     
-    // 标记为已初始化
-    bIsInitialized = true;
+    // 3. 初始化 State 组件（依赖 EntityComponent）
+    if (StateComponent)
+    {
+        // StateComponent 在其自己的 BeginPlay 中会初始化
+        // 由于我们确保了 EntityComponent 先初始化，时序已正确
+    }
+    
+    // 4. 绑定所有组件的委托
+    BindComponentDelegates();
 }
 
 void USyEntityComponent::EnsureDependentComponents()
@@ -237,22 +259,57 @@ FName USyEntityComponent::GetEntityAlias() const
     return NAME_None;
 }
 
-bool USyEntityComponent::SendMessage(const FGameplayTag& MessageType)
+// --- 4.4 语义化接口 - 区分消息和状态 ---
+
+// 临时事件接口（通过 MessageBus）
+bool USyEntityComponent::BroadcastEvent(const FGameplayTag& EventType)
 {
     if (MessageComponent)
     {
-        return MessageComponent->SendMessage(MessageType);
+        return MessageComponent->SendMessage(EventType);
     }
     
     return false;
 }
 
-bool USyEntityComponent::SendMessageWithMetadata(const FGameplayTag& MessageType, const TMap<FName, FString>& Metadata)
+bool USyEntityComponent::BroadcastEventWithMetadata(const FGameplayTag& EventType, const TMap<FName, FString>& Metadata)
 {
     if (MessageComponent)
     {
-        return MessageComponent->SendMessageWithMetadata(MessageType, Metadata);
+        return MessageComponent->SendMessageWithMetadata(EventType, Metadata);
     }
     
     return false;
+}
+
+// 持久状态接口（通过 StateManager）
+bool USyEntityComponent::ApplyStateOperation(const FSyOperation& Operation)
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return false;
+    }
+    
+    UGameInstance* GameInstance = World->GetGameInstance();
+    if (!GameInstance)
+    {
+        return false;
+    }
+    
+    USyStateManagerSubsystem* StateManager = GameInstance->GetSubsystem<USyStateManagerSubsystem>();
+    if (!StateManager)
+    {
+        return false;
+    }
+    
+    return StateManager->RecordOperation(Operation);
+}
+
+void USyEntityComponent::ApplyTemporaryStateModifications(const FSyStateParameterSet& TempModifications)
+{
+    if (StateComponent)
+    {
+        StateComponent->ApplyTemporaryModifications(TempModifications);
+    }
 } 

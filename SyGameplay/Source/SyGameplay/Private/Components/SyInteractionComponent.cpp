@@ -113,7 +113,7 @@ void USyInteractionComponent::HandleInteractionRequest()
         return;
     }
 
-    CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.Start")));
+    CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.Start")));
     
     // 进入交互后临时关闭，肯定有更合适的处理方式
     Disable();
@@ -125,7 +125,7 @@ void USyInteractionComponent::HandleInteractionRequest()
     {
         UE_LOG(LogSyInteraction, Warning, TEXT("Actor %s: Interaction failed. No InteractionListMetadata found with tag '%s'."), 
             *GetNameSafe(GetOwner()), *InteractionListMetadataTag.ToString());
-        CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
+        CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
         return;
     }
 
@@ -134,7 +134,7 @@ void USyInteractionComponent::HandleInteractionRequest()
     if (InteractionItems.IsEmpty())
     {
         UE_LOG(LogSyInteraction, Log, TEXT("Actor %s: Interaction list is empty."), *GetNameSafe(GetOwner()));
-        CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
+        CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
         return;
     }
 
@@ -144,7 +144,7 @@ void USyInteractionComponent::HandleInteractionRequest()
     if (!FirstInteractionItem.IsValid() || !FirstInteractionItem.GetScriptStruct()->IsChildOf(FSyInteractInfoBase::StaticStruct()))
     {
         UE_LOG(LogSyInteraction, Error, TEXT("Actor %s: First interaction item is invalid or not derived from FSyInteractInfoBase."), *GetNameSafe(GetOwner()));
-        CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
+        CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
         return;
     }
 
@@ -152,7 +152,7 @@ void USyInteractionComponent::HandleInteractionRequest()
     if(!BaseInfo)
     {
         UE_LOG(LogSyInteraction, Error, TEXT("Actor %s: Failed to get base pointer from first interaction item."), *GetNameSafe(GetOwner()));
-        CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
+        CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
         return;
     }
 
@@ -174,14 +174,14 @@ void USyInteractionComponent::HandleInteractionRequest()
     else
     {
         UE_LOG(LogSyInteraction, Warning, TEXT("Unknown interaction type tag: %s"), *InteractionType.ToString());
-        CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
+        CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
     }
     
 }
 
 void USyInteractionComponent::HandleInteractionFinish() const
 {
-    CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
+    CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
 }
 
 void USyInteractionComponent::ProcessBasicInteraction(const FInstancedStruct& InteractionInfoStruct)
@@ -203,7 +203,7 @@ void USyInteractionComponent::ProcessBasicInteraction(const FInstancedStruct& In
     {
         UE_LOG(LogSyInteraction, Log, TEXT("Basic interaction requested, but no listeners bound to OnBasicInteractionRequested."));
     }
-    // CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.Basic")));
+    // CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.Basic")));
 }
 
 void USyInteractionComponent::ProcessFlowInteraction(const FInstancedStruct& InteractionInfoStruct)
@@ -258,11 +258,11 @@ void USyInteractionComponent::ProcessFlowInteraction(const FInstancedStruct& Int
         // 所以后续到 Flow 里实现一个节点，处理对话完成时，基于Owner尝试发送 Event.Interaction.End 吧（）
         // 最好是直接拓展一个 Flow 类，然后实现在Finish流程中
 
-        // CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.Flow")));
+        // CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.Flow")));
     }
     else
     {
         UE_LOG(LogSyInteraction, Error, TEXT("Failed to get FlowSubsystem."));
-        CachedEntityComponent->SendMessage(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
+        CachedEntityComponent->BroadcastEvent(FGameplayTag::RequestGameplayTag(TEXT("Event.Interaction.End")));
     }
 }

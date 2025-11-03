@@ -32,6 +32,7 @@ public class SyEntity : ModuleRules
 				"SyCore",
 				"SyStateCore",
 				"SyStateManager",
+				"SyOperation"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

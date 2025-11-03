@@ -65,11 +65,74 @@ bool USyStateManagerSubsystem::RecordOperation(const FSyOperation& Operation)
         OperationIdIndex.Add(Operation.OperationId, NewIndex);
     }
     
-    // 5. 使相关缓存失效
+    // 5. 增量更新聚合快照（而非简单失效）
     if (Operation.Target.TargetTypeTag.IsValid())
     {
-        CacheVersions.Remove(Operation.Target.TargetTypeTag);
+        FSyStateParameterSet& Snapshot = AggregatedCache.FindOrAdd(Operation.Target.TargetTypeTag);
+        
+        // 获取当前快照的 Map 形式
+        TMap<FGameplayTag, TArray<FInstancedStruct>> SnapshotMap = Snapshot.GetMutableParametersMap();
+        
+        // 将新操作的修改增量合并到快照中
+        for (const auto& ModPair : Operation.Modifier.StateModifications.GetParametersAsMap())
+        {
+            const FGameplayTag& StateTag = ModPair.Key;
+            const TArray<FInstancedStruct>& NewParams = ModPair.Value;
+            
+            // 获取快照中对应Tag的现有参数数组
+            TArray<FInstancedStruct>& SnapshotParams = SnapshotMap.FindOrAdd(StateTag);
+            
+            // 合并参数（与 AggregateRecordModifications 中的逻辑一致）
+            for (const FInstancedStruct& SourceStruct : NewParams)
+            {
+                if (!SourceStruct.IsValid()) continue;
+                
+                const UScriptStruct* StructType = SourceStruct.GetScriptStruct();
+                if (!StructType) continue;
+                
+                FInstancedStruct* ExistingPtr = SnapshotParams.FindByPredicate(
+                    [&StructType](const FInstancedStruct& Existing)
+                    {
+                        return Existing.IsValid() && Existing.GetScriptStruct() == StructType;
+                    });
+                
+                if (ExistingPtr)
+                {
+                    // 已存在相同类型的参数，合并或覆盖
+                    const UScriptStruct* ListBaseType = FSyListParameterBase::StaticStruct();
+                    if (StructType && StructType->IsChildOf(ListBaseType) && ExistingPtr->GetScriptStruct()->IsChildOf(ListBaseType))
+                    {
+                        // 列表类型 - 聚合
+                        FSyListParameterBase* TargetList = ExistingPtr->GetMutablePtr<FSyListParameterBase>();
+                        const FSyListParameterBase* SourceList = SourceStruct.GetPtr<FSyListParameterBase>();
+                        if (TargetList && SourceList)
+                        {
+                            TargetList->AggregateItemsInternal(SourceList->GetListItemsInternal());
+                        }
+                    }
+                    else
+                    {
+                        // 非列表类型 - 覆盖
+                        *ExistingPtr = SourceStruct;
+                    }
+                }
+                else
+                {
+                    // 不存在，添加新参数
+                    SnapshotParams.Add(SourceStruct);
+                }
+            }
+        }
+        
+        // 将更新后的 Map 同步回快照
+        Snapshot.UpdateFromMap(SnapshotMap);
+        
+        // 更新版本号
+        CacheVersions.Add(Operation.Target.TargetTypeTag, GlobalVersion);
         GlobalVersion++;
+        
+        UE_LOG(LogSyStateManager, VeryVerbose, TEXT("⚡ Incrementally updated snapshot for target tag: %s (Version: %d)"), 
+            *Operation.Target.TargetTypeTag.ToString(), GlobalVersion - 1);
     }
     
     // 6. 广播事件
@@ -156,9 +219,13 @@ bool USyStateManagerSubsystem::UnloadOperation(const FGuid& OperationIdToUnload)
             IndicesPtr->Remove(FoundIndex);
         }
         
-        // 使缓存失效
-        CacheVersions.Remove(TargetTag);
+        // 重新计算该 TargetTag 的聚合快照
+        RecalculateSnapshotForTarget(TargetTag);
+        
         GlobalVersion++;
+        
+        UE_LOG(LogSyStateManager, VeryVerbose, TEXT("🔄 Recalculated snapshot for target tag: %s after unload"), 
+            *TargetTag.ToString());
     }
     
     UE_LOG(LogSyStateManager, Log, TEXT("✅ Unloaded operation with ID: %s"), *OperationIdToUnload.ToString());
@@ -176,6 +243,7 @@ bool USyStateManagerSubsystem::UnloadOperation(const FGuid& OperationIdToUnload)
 int32 USyStateManagerSubsystem::UnloadOperationsBySource(const FSyOperationSource& SourceToMatch)
 {
     TArray<FSyStateModificationRecord> RecordsToBroadcast;
+    TSet<FGameplayTag> AffectedTargetTags; // 收集受影响的目标类型
     int32 RemovedCount = 0;
 
     // Use RemoveAllSwap with predicate, collecting copies for broadcast
@@ -185,6 +253,10 @@ int32 USyStateManagerSubsystem::UnloadOperationsBySource(const FSyOperationSourc
             if (bool bMatch = (Record.Operation.Source.SourceTypeTag == SourceToMatch.SourceTypeTag))
             {   
                 RecordsToBroadcast.Add(Record); // Add copy before potential removal
+                if (Record.Operation.Target.TargetTypeTag.IsValid())
+                {
+                    AffectedTargetTags.Add(Record.Operation.Target.TargetTypeTag); // 记录受影响的目标
+                }
                 return true; // Mark for removal
             }
             return false; 
@@ -195,6 +267,30 @@ int32 USyStateManagerSubsystem::UnloadOperationsBySource(const FSyOperationSourc
         UE_LOG(LogSyStateManager, Log, TEXT("Unloaded %d operations matching source (Tag: %s)."), 
             RemovedCount, 
             *SourceToMatch.SourceTypeTag.ToString());
+
+        // 重建索引并重新计算受影响目标的快照
+        OperationIdIndex.Empty();
+        TargetTypeIndex.Empty();
+        for (int32 i = 0; i < ModificationLog.Num(); ++i)
+        {
+            const FSyStateModificationRecord& Record = ModificationLog[i];
+            if (Record.Operation.OperationId.IsValid())
+            {
+                OperationIdIndex.Add(Record.Operation.OperationId, i);
+            }
+            if (Record.Operation.Target.TargetTypeTag.IsValid())
+            {
+                TargetTypeIndex.FindOrAdd(Record.Operation.Target.TargetTypeTag).Add(i);
+            }
+        }
+        
+        // 重新计算所有受影响目标的聚合快照
+        for (const FGameplayTag& AffectedTag : AffectedTargetTags)
+        {
+            RecalculateSnapshotForTarget(AffectedTag);
+        }
+        
+        GlobalVersion++;
 
         // Broadcast the change for each removed record using the unified delegate
         if (OnStateModificationChanged.IsBound())
@@ -216,71 +312,36 @@ int32 USyStateManagerSubsystem::UnloadOperationsBySource(const FSyOperationSourc
 
 FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const FGameplayTag& TargetFilterTag /* TODO: 添加 SourceFilterTag */) const
 {
-    // ===== 缓存检查 =====
+    // ===== 直接返回预聚合快照 =====
     if (TargetFilterTag.IsValid())
     {
-        // 检查缓存是否有效
-        const FSyStateParameterSet* CachedResult = AggregatedCache.Find(TargetFilterTag);
-        const int32* CachedVersion = CacheVersions.Find(TargetFilterTag);
-        
-        if (CachedResult && CachedVersion && *CachedVersion == GlobalVersion)
+        // 查找预聚合的快照
+        const FSyStateParameterSet* Snapshot = AggregatedCache.Find(TargetFilterTag);
+        if (Snapshot)
         {
-            UE_LOG(LogSyStateManager, VeryVerbose, TEXT("⚡ Cache hit for target tag: %s"), *TargetFilterTag.ToString());
-            return *CachedResult;
+            UE_LOG(LogSyStateManager, VeryVerbose, TEXT("⚡ Returning pre-aggregated snapshot for target tag: %s"), 
+                *TargetFilterTag.ToString());
+            return *Snapshot;
         }
+        
+        // 快照不存在，说明还没有该目标类型的操作记录
+        UE_LOG(LogSyStateManager, VeryVerbose, TEXT("No snapshot found for target tag: %s, returning empty set"), 
+            *TargetFilterTag.ToString());
+        return FSyStateParameterSet();
     }
 
-    UE_LOG(LogSyStateManager, VeryVerbose, TEXT("Cache miss for target tag: %s, computing aggregation..."), 
-        TargetFilterTag.IsValid() ? *TargetFilterTag.ToString() : TEXT("Invalid"));
-
+    // 没有目标过滤时，手动聚合所有记录（保持向后兼容）
+    UE_LOG(LogSyStateManager, VeryVerbose, TEXT("No target filter provided, manually aggregating all records..."));
+    
     FSyStateParameterSet AggregatedResult;
     TMap<FGameplayTag, TArray<FInstancedStruct>> AggregatedParamsMap;
-
-    // ===== 使用索引优化查询 =====
-    // 如果提供了目标类型过滤，使用索引只遍历相关记录
-    if (TargetFilterTag.IsValid())
+    
+    for (const FSyStateModificationRecord& Record : ModificationLog)
     {
-        const TArray<int32>* IndicesPtr = TargetTypeIndex.Find(TargetFilterTag);
-        if (IndicesPtr)
-        {
-            for (int32 Index : *IndicesPtr)
-            {
-                if (!ModificationLog.IsValidIndex(Index))
-                {
-                    UE_LOG(LogSyStateManager, Warning, TEXT("Invalid index %d found in TargetTypeIndex for tag %s"), 
-                        Index, *TargetFilterTag.ToString());
-                    continue;
-                }
-                
-                const FSyStateModificationRecord& Record = ModificationLog[Index];
-                AggregateRecordModifications(Record, AggregatedParamsMap);
-            }
-        }
-    }
-    else
-    {
-        // 没有过滤条件时，遍历所有记录（保持向后兼容）
-        for (const FSyStateModificationRecord& Record : ModificationLog)
-        {
-            AggregateRecordModifications(Record, AggregatedParamsMap);
-        }
+        AggregateRecordModifications(Record, AggregatedParamsMap);
     }
     
-    // 将聚合后的 Map 赋值给结果结构体
     AggregatedResult = AggregatedParamsMap;
-
-    // ===== 更新缓存 =====
-    if (TargetFilterTag.IsValid())
-    {
-        // 使用 const_cast 绕过 const 限制（这是合理的，因为缓存不影响逻辑结果）
-        USyStateManagerSubsystem* MutableThis = const_cast<USyStateManagerSubsystem*>(this);
-        MutableThis->AggregatedCache.Add(TargetFilterTag, AggregatedResult);
-        MutableThis->CacheVersions.Add(TargetFilterTag, GlobalVersion);
-        
-        UE_LOG(LogSyStateManager, Verbose, TEXT("✅ Cached aggregation result for target tag: %s (Version: %d)"), 
-            *TargetFilterTag.ToString(), GlobalVersion);
-    }
-
     return AggregatedResult;
 }
 
@@ -342,6 +403,44 @@ void USyStateManagerSubsystem::AggregateRecordModifications(
     }
 }
 
+void USyStateManagerSubsystem::RecalculateSnapshotForTarget(const FGameplayTag& TargetTag)
+{
+    if (!TargetTag.IsValid())
+    {
+        return;
+    }
+
+    // 清空现有快照
+    FSyStateParameterSet& Snapshot = AggregatedCache.FindOrAdd(TargetTag);
+    Snapshot.ClearAllStateParams();
+
+    // 使用索引获取该目标类型的所有记录
+    const TArray<int32>* IndicesPtr = TargetTypeIndex.Find(TargetTag);
+    if (!IndicesPtr || IndicesPtr->Num() == 0)
+    {
+        // 没有相关记录，快照保持为空
+        CacheVersions.Add(TargetTag, GlobalVersion);
+        UE_LOG(LogSyStateManager, Verbose, TEXT("Recalculated empty snapshot for target tag: %s"), *TargetTag.ToString());
+        return;
+    }
+
+    // 重新聚合所有相关记录
+    TMap<FGameplayTag, TArray<FInstancedStruct>> AggregatedMap;
+    for (int32 Index : *IndicesPtr)
+    {
+        if (ModificationLog.IsValidIndex(Index))
+        {
+            AggregateRecordModifications(ModificationLog[Index], AggregatedMap);
+        }
+    }
+
+    // 更新快照
+    Snapshot = AggregatedMap;
+    CacheVersions.Add(TargetTag, GlobalVersion);
+
+    UE_LOG(LogSyStateManager, Verbose, TEXT("✅ Recalculated snapshot for target tag: %s with %d records"), 
+        *TargetTag.ToString(), IndicesPtr->Num());
+}
 
 const TArray<FSyStateModificationRecord>& USyStateManagerSubsystem::GetAllModifications_Simple() const
 {

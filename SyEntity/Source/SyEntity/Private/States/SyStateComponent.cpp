@@ -84,47 +84,58 @@ FGameplayTag USyStateComponent::GetTargetTypeTag() const
 
 void USyStateComponent::ApplyInitializationData(const FSyStateParameterSet& InitData)
 {
-    UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applying initialization data to LocalStateCategories."), *GetNameSafe(GetOwner()));
-    LocalStateCategories.ApplyInitData(InitData);
-    GlobalStateCategories.Empty(); // Ensure global state is cleared on re-init
+    UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applying initialization data to Default layer."), *GetNameSafe(GetOwner()));
+    
+    // 应用到默认层
+    LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Default, InitData);
 
-    // Broadcast that the effective state might have changed
+    // Broadcast that the effective state has changed
+    OnEffectiveStateChanged.Broadcast();
+}
+
+void USyStateComponent::ApplyTemporaryModifications(const FSyStateParameterSet& TempModifications)
+{
+    UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applying temporary modifications to Temporary layer."), *GetNameSafe(GetOwner()));
+    
+    // 应用到临时层
+    LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Temporary, TempModifications);
+
+    // Broadcast that the effective state has changed
+    OnEffectiveStateChanged.Broadcast();
+}
+
+void USyStateComponent::ClearStateLayer(ESyStateLayer Layer)
+{
+    UE_LOG(LogSyStateComponent, Log, TEXT("%s: Clearing layer %d."), *GetNameSafe(GetOwner()), (int32)Layer);
+    
+    LayeredState.ClearLayer(Layer);
+
+    // Broadcast that the effective state has changed
     OnEffectiveStateChanged.Broadcast();
 }
 
 // --- State Access ---
 
+const FSyStateCategories& USyStateComponent::GetStateLayer(ESyStateLayer Layer) const
+{
+    return LayeredState.GetLayer(Layer);
+}
+
 FSyStateCategories USyStateComponent::GetEffectiveStateCategories() const
 {
-    // Start with a copy of the local/default state
-    FSyStateCategories EffectiveState = LocalStateCategories;
-
-    // Merge the global state modifications on top (global overrides local)
-    EffectiveState.MergeWith(GlobalStateCategories);
-    
-    return EffectiveState;
+    // 使用分层容器的缓存机制获取有效状态
+    return LayeredState.GetEffectiveState();
 }
 
 bool USyStateComponent::GetEffectiveStateParam(FGameplayTag StateTag, FInstancedStruct& OutParam) const
 {
-    // 1. Try Global State first
-    if (const FSyStateMetadatas* GlobalMetadatas = GlobalStateCategories.StateData.Find(StateTag))
+    // 获取有效状态（已自动按优先级合并）
+    FSyStateCategories EffectiveState = GetEffectiveStateCategories();
+    
+    if (const FSyStateMetadatas* Metadatas = EffectiveState.GetStateDataMap().Find(StateTag))
     {
         // Find the first valid metadata param
-        for(const auto& MetaPtr : GlobalMetadatas->MetadataArray)
-        {
-            if(const USyStateMetadataBase* Metadata = Cast<USyStateMetadataBase>(MetaPtr))
-            {
-                 OutParam = Metadata->GetValueStruct(); // Assuming UO_TagMetadata has GetValueStruct()
-                 if (OutParam.IsValid()) return true;
-            }
-        }
-    }
-
-    // 2. Try Local State if not found or invalid in Global
-    if (const FSyStateMetadatas* LocalMetadatas = LocalStateCategories.StateData.Find(StateTag))
-    {
-        for(const auto& MetaPtr : LocalMetadatas->MetadataArray)
+        for(const auto& MetaPtr : Metadatas->MetadataArray)
         {
             if(const USyStateMetadataBase* Metadata = Cast<USyStateMetadataBase>(MetaPtr))
             {
@@ -134,7 +145,7 @@ bool USyStateComponent::GetEffectiveStateParam(FGameplayTag StateTag, FInstanced
         }
     }
 
-    // Not found in either
+    // Not found
     OutParam.Reset();
     return false;
 }
@@ -200,14 +211,19 @@ void USyStateComponent::ApplyAggregatedModifications()
     if (!StateManagerSubsystem || !bEnableGlobalSync) return;
 
     FGameplayTag CurrentTargetTag = GetTargetTypeTag();
-    if (!CurrentTargetTag.IsValid()) { UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Cannot apply mods, invalid TargetTag."), *GetNameSafe(GetOwner())); return; }
+    if (!CurrentTargetTag.IsValid()) 
+    { 
+        UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Cannot apply mods, invalid TargetTag."), *GetNameSafe(GetOwner())); 
+        return; 
+    }
 
     FSyStateParameterSet AggregatedMods = StateManagerSubsystem->GetAggregatedModifications(CurrentTargetTag);
 
-    // Use the new optimized method to update GlobalStateCategories
-    GlobalStateCategories.UpdateFromParameterMap(AggregatedMods.GetParametersAsMap());
+    // 应用到持久层（全局状态层）
+    LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Persistent, AggregatedMods);
 
-    UE_LOG(LogSyStateComponent, Verbose, TEXT("%s: Applied aggregated modifications to GlobalStateCategories for Tag %s."), *GetNameSafe(GetOwner()), *CurrentTargetTag.ToString());
+    UE_LOG(LogSyStateComponent, Verbose, TEXT("%s: Applied aggregated modifications to Persistent layer for Tag %s."), 
+        *GetNameSafe(GetOwner()), *CurrentTargetTag.ToString());
 
     // Broadcast that the effective state definitely changed
     OnEffectiveStateChanged.Broadcast();

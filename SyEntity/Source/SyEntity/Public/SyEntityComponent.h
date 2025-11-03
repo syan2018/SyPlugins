@@ -94,19 +94,38 @@ public:
     // --- 状态接口 (代理StateComponent) ---
     // 移除了 GetState/SetState 代理，建议直接访问 StateComponent->GetCurrentStateCategories()
 
-    // --- 消息接口 (代理MessageComponent) ---
+    // --- 消息接口 (代理MessageComponent) - 用于临时事件 ---
 public:
     /**
-     * @brief 发送实体消息。
+     * @brief 广播临时事件（通过 MessageBus）
+     * @note 用于瞬时性、不可恢复的事件通知（如UI交互、音效触发）
      */
-    UFUNCTION(BlueprintCallable, Category = "SyEntity|Message")
-    bool SendMessage(const FGameplayTag& MessageType);
+    UFUNCTION(BlueprintCallable, Category = "SyEntity|Events", meta=(DisplayName="Broadcast Event"))
+    bool BroadcastEvent(const FGameplayTag& EventType);
 
     /**
-     * @brief 发送带元数据的实体消息。
+     * @brief 广播带元数据的临时事件
      */
-    UFUNCTION(BlueprintCallable, Category = "SyEntity|Message")
-    bool SendMessageWithMetadata(const FGameplayTag& MessageType, const TMap<FName, FString>& Metadata);
+    UFUNCTION(BlueprintCallable, Category = "SyEntity|Events")
+    bool BroadcastEventWithMetadata(const FGameplayTag& EventType, const TMap<FName, FString>& Metadata);
+    
+    // --- 状态操作接口 (通过 StateManager) - 用于持久状态 ---
+    /**
+     * @brief 记录状态操作（通过 StateManager）
+     * @note 用于持久性、可恢复的状态变更（如角色属性、任务进度）
+     * @param Operation 要记录的状态操作
+     * @return 如果成功记录返回 true
+     */
+    UFUNCTION(BlueprintCallable, Category = "SyEntity|States", meta=(DisplayName="Apply State Operation"))
+    bool ApplyStateOperation(const FSyOperation& Operation);
+    
+    /**
+     * @brief 应用临时状态修改到 Temporary 层（如 Buff/Debuff）
+     * @note 这些状态不会记录到 StateManager，仅影响本地实体
+     * @param TempModifications 临时修改的参数集
+     */
+    UFUNCTION(BlueprintCallable, Category = "SyEntity|States")
+    void ApplyTemporaryStateModifications(const FSyStateParameterSet& TempModifications);
 
     // --- 组件间通信 (核心机制) ---
 public:
@@ -139,11 +158,17 @@ private:
     bool bIsInitialized = false;
     bool bRegistered = false; // 是否已注册到Registry
 
-    // --- 内部方法 ---
-    void EnsureDependentComponents(); // 确保依赖组件存在
+    // --- 内部方法 - 两阶段初始化 ---
+    /** Phase 1: 创建和注册所有依赖组件 */
+    void EnsureDependentComponents();
+    
+    /** Phase 2: 按依赖顺序初始化组件 */
+    void InitializeComponentsInOrder();
+    
+    /** 其他内部方法 */
     void RegisterWithRegistry();
     void UnregisterFromRegistry();
-    void BindComponentDelegates(); // 重命名，绑定所有组件的委托
+    void BindComponentDelegates(); // 绑定所有组件的委托
     
     void HandleLocalStateDataChanged(); // StateComponent 内部事件处理
     void HandleEntityIdReady(); // IdentityComponent ID生成事件处理

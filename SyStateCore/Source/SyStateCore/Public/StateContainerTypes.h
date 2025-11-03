@@ -12,6 +12,30 @@
 struct FSyStateParameterSet; // Forward declare the renamed struct
 
 /**
+ * ESyStateLayer - 状态层级枚举
+ * 
+ * 定义状态的优先级层级，高层级的状态会覆盖低层级的状态
+ * 用于实现复杂的状态管理场景（如Buff系统）
+ */
+UENUM(BlueprintType)
+enum class ESyStateLayer : uint8
+{
+	/** 默认层：初始默认值，优先级最低 */
+	Default = 0 UMETA(DisplayName = "Default"),
+	
+	/** 持久层：从 StateManager 同步的全局状态 */
+	Persistent = 1 UMETA(DisplayName = "Persistent"),
+	
+	/** 临时层：临时修改（如Buff/Debuff），会被保存到存档 */
+	Temporary = 2 UMETA(DisplayName = "Temporary"),
+	
+	/** 覆盖层：强制覆盖，优先级最高（如GM命令） */
+	Override = 3 UMETA(DisplayName = "Override"),
+	
+	MAX UMETA(Hidden)
+};
+
+/**
  * FSyStateMetadatas - 状态元数据数组
  * 
  * 用于存储特定状态标签的多个元数据对象
@@ -183,4 +207,108 @@ struct TStructOpsTypeTraits<FSyStateCategories> : public TStructOpsTypeTraitsBas
 		WithSerializer = true,
 		WithPostSerialize = true,
 	};
-}; 
+};
+
+/**
+ * FSyLayeredStateContainer - 分层状态容器
+ * 
+ * 支持多层级的状态管理，按优先级合并状态
+ * 用于 USyStateComponent 实现复杂的状态覆盖逻辑
+ */
+USTRUCT(BlueprintType)
+struct SYSTATECORE_API FSyLayeredStateContainer
+{
+	GENERATED_BODY()
+
+	/** 默认构造函数 */
+	FSyLayeredStateContainer() = default;
+
+	/**
+	 * @brief 获取指定层级的状态容器
+	 * @param Layer 状态层级
+	 * @return 该层级的状态容器引用
+	 */
+	FSyStateCategories& GetLayer(ESyStateLayer Layer);
+
+	/**
+	 * @brief 获取指定层级的状态容器（只读）
+	 * @param Layer 状态层级
+	 * @return 该层级的状态容器常量引用
+	 */
+	const FSyStateCategories& GetLayer(ESyStateLayer Layer) const;
+
+	/**
+	 * @brief 设置指定层级的完整状态
+	 * @param Layer 状态层级
+	 * @param NewState 新的状态数据
+	 */
+	void SetLayer(ESyStateLayer Layer, const FSyStateCategories& NewState);
+
+	/**
+	 * @brief 清除指定层级的所有状态
+	 * @param Layer 状态层级
+	 */
+	void ClearLayer(ESyStateLayer Layer);
+
+	/**
+	 * @brief 获取合并后的有效状态（按优先级从低到高合并）
+	 * @return 所有层级合并后的最终状态
+	 */
+	FSyStateCategories GetEffectiveState() const;
+
+	/**
+	 * @brief 检查指定层级是否有数据
+	 * @param Layer 状态层级
+	 * @return 如果该层级有状态数据返回 true
+	 */
+	bool HasDataInLayer(ESyStateLayer Layer) const;
+
+	/**
+	 * @brief 清除所有层级的状态
+	 */
+	void ClearAllLayers();
+
+	/**
+	 * @brief 在指定层级应用参数集（合并模式）
+	 * @param Layer 目标层级
+	 * @param ParamSet 要应用的参数集
+	 */
+	void ApplyParameterSetToLayer(ESyStateLayer Layer, const FSyStateParameterSet& ParamSet);
+
+	/**
+	 * @brief 从特定层级查找状态元数据
+	 * @param Layer 状态层级
+	 * @param StateTag 状态标签
+	 * @return 找到的元数据对象，找不到返回 nullptr
+	 */
+	template<typename T>
+	T* FindStateMetadataInLayer(ESyStateLayer Layer, const FGameplayTag& StateTag) const;
+
+private:
+	/** 各层级的状态容器 */
+	UPROPERTY(VisibleAnywhere, Category = "SyStateCore|LayeredState")
+	TMap<ESyStateLayer, FSyStateCategories> StateLayers;
+
+	/** 缓存的有效状态（用于性能优化） */
+	mutable FSyStateCategories CachedEffectiveState;
+
+	/** 缓存版本号（用于失效检测） */
+	mutable int32 CacheVersion = 0;
+
+	/** 当前版本号（每次修改递增） */
+	int32 CurrentVersion = 0;
+
+	/** 使缓存失效 */
+	void InvalidateCache();
+};
+
+// 模板实现
+template<typename T>
+T* FSyLayeredStateContainer::FindStateMetadataInLayer(ESyStateLayer Layer, const FGameplayTag& StateTag) const
+{
+	if (const FSyStateCategories* LayerState = StateLayers.Find(Layer))
+	{
+		return LayerState->FindFirstStateMetadata<T>(StateTag);
+	}
+	return nullptr;
+} 

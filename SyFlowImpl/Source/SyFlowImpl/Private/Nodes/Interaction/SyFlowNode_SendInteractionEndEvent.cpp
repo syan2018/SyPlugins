@@ -36,7 +36,7 @@ void USyFlowNode_SendInteractionEndEvent::ExecuteInput(const FName& PinName)
 
 		// Send the message via the EntityComponent
 		UE_LOG(LogFlow, Log, TEXT("Sending message %s via EntityComponent on %s"), *MessageTag.ToString(), *OwnerActor->GetName());
-		bool bSent = EntityComponent->SendMessage(MessageTag); // Use the EntityComponent's method
+		bool bSent = EntityComponent->BroadcastEvent(MessageTag); 
 		if (!bSent)
 		{
 			UE_LOG(LogFlow, Warning, TEXT("SendInteractionEndEvent: EntityComponent->SendMessage failed for tag %s on actor %s."), *MessageTag.ToString(), *OwnerActor->GetName());

@@ -36,27 +36,27 @@ public:
 
     // --- 状态访问 ---
     /**
-     * @brief 获取本地（初始/默认）状态。
-     * @return 对本地 FSyStateCategories 的常量引用。
-     * @note 直接通过此容器访问状态数据 (例如使用 FindFirstStateMetadata<T>)。
+     * @brief 获取指定层级的状态
+     * @param Layer 状态层级
+     * @return 对该层级状态的常量引用
      */
     UFUNCTION(BlueprintPure, Category = "SyState|Access")
-    const FSyStateCategories& GetLocalStateCategories() const { return LocalStateCategories; }
+    const FSyStateCategories& GetStateLayer(ESyStateLayer Layer) const;
 
     /**
-     * @brief 获取全局（聚合修改后）的状态。
-     * @return 对全局 FSyStateCategories 的常量引用。
-     * @note 直接通过此容器访问状态数据 (例如使用 FindFirstStateMetadata<T>)。
-     */
-    UFUNCTION(BlueprintPure, Category = "SyState|Access")
-    const FSyStateCategories& GetGlobalStateCategories() const { return GlobalStateCategories; }
-
-    /**
-     * @brief 获取最终生效的状态集合 (本地状态被全局状态覆盖/合并)
+     * @brief 获取最终生效的状态集合 (所有层级合并后的结果)
      * @return 一个包含最终生效状态的 FSyStateCategories 副本。
+     * @note 使用缓存机制，性能已优化
      */
     UFUNCTION(BlueprintPure, Category = "SyState|Access", meta=(DisplayName="Get Effective State Categories"))
     FSyStateCategories GetEffectiveStateCategories() const;
+
+    /**
+     * @brief 获取分层状态容器的直接访问
+     * @return 对分层状态容器的常量引用
+     * @note 高级用法，用于需要直接操作层级的场景
+     */
+    const FSyLayeredStateContainer& GetLayeredStateContainer() const { return LayeredState; }
 
     /**
      * @brief 获取指定标签最终生效的第一个元数据参数。
@@ -87,13 +87,27 @@ public:
     FSyStateParameterSet DefaultInitData;
 
     /**
-     * @brief 手动应用初始化数据。
+     * @brief 手动应用初始化数据（应用到 Default 层）。
      *        通常在 BeginPlay 中自动调用一次 DefaultInitData。
      *        如果需要在运行时重新初始化或应用不同的初始化数据，可以调用此函数。
      * @param InitData 要应用的初始化数据。
      */
     UFUNCTION(BlueprintCallable, Category = "SyState|Initialization")
     void ApplyInitializationData(const FSyStateParameterSet& InitData);
+
+    /**
+     * @brief 应用临时状态修改（Buff/Debuff等）到 Temporary 层
+     * @param TempModifications 临时修改的参数集
+     */
+    UFUNCTION(BlueprintCallable, Category = "SyState|Modification")
+    void ApplyTemporaryModifications(const FSyStateParameterSet& TempModifications);
+
+    /**
+     * @brief 清除指定层级的所有状态
+     * @param Layer 要清除的层级
+     */
+    UFUNCTION(BlueprintCallable, Category = "SyState|Modification")
+    void ClearStateLayer(ESyStateLayer Layer);
 
     /**
      * @brief 获取本组件关联的目标类型标签。
@@ -124,16 +138,14 @@ protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     //~ End UActorComponent Interface
 
-    /** 存储本地（初始/默认）状态数据
-     *  TODO: 该字段在第二次使用时会随机丢失，拼尽全力无法战胜
-     *  不会是什么逆天GC吧不会吧不会吧
+    /** 分层状态容器 - 使用层级系统管理状态
+     *  - Default 层：初始化数据
+     *  - Persistent 层：从 StateManager 同步的全局状态
+     *  - Temporary 层：临时修改（Buff等）
+     *  - Override 层：强制覆盖
      */
     UPROPERTY(SaveGame, VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Internal")
-    FSyStateCategories LocalStateCategories;
-
-    /** 存储从 StateManager 聚合来的全局状态修改 */
-    UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "SyState|Internal")
-    FSyStateCategories GlobalStateCategories;
+    FSyLayeredStateContainer LayeredState;
 
 private:
     /** 缓存 StateManager 子系统指针 */

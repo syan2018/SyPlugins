@@ -176,6 +176,37 @@ struct SYSTATECORE_API FSyStateParameterSet
 	}
 
 	/** 
+	 * 获取可修改的参数 Map（用于内部增量更新）
+	 * @return 可修改的参数 TMap
+	 * @note 警告：直接修改返回的 Map 后需要确保与 Parameters 数组同步
+	 */
+	TMap<FGameplayTag, TArray<FInstancedStruct>> GetMutableParametersMap()
+	{
+		TMap<FGameplayTag, TArray<FInstancedStruct>> ResultMap;
+		for (const FSyStateParams& StateParams : Parameters)
+		{
+			ResultMap.Add(StateParams.Tag, StateParams.Params);
+		}
+		return ResultMap;
+	}
+
+	/**
+	 * 从 TMap 更新内部参数数组（用于增量更新后的同步）
+	 * @param UpdatedMap 更新后的参数 Map
+	 */
+	void UpdateFromMap(const TMap<FGameplayTag, TArray<FInstancedStruct>>& UpdatedMap)
+	{
+		Parameters.Empty(UpdatedMap.Num());
+		for (const auto& Pair : UpdatedMap)
+		{
+			if (Pair.Key.IsValid())
+			{
+				Parameters.Emplace(Pair.Key, Pair.Value);
+			}
+		}
+	}
+
+	/** 
 	 * 根据 Tag 查找第一个匹配的 FSyStateParams (运行时辅助函数)
 	 * @param TagToFind 要查找的 Tag
 	 * @return 指向找到的 FSyStateParams 的指针，如果未找到则为 nullptr。

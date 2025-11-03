@@ -343,4 +343,90 @@ void FSyStateCategories::PostSerialize(const FArchive& Ar)
 	}
 }
 
+// --- FSyLayeredStateContainer Implementation ---
+
+FSyStateCategories& FSyLayeredStateContainer::GetLayer(ESyStateLayer Layer)
+{
+	return StateLayers.FindOrAdd(Layer);
+}
+
+const FSyStateCategories& FSyLayeredStateContainer::GetLayer(ESyStateLayer Layer) const
+{
+	static const FSyStateCategories EmptyState;
+	if (const FSyStateCategories* Found = StateLayers.Find(Layer))
+	{
+		return *Found;
+	}
+	return EmptyState;
+}
+
+void FSyLayeredStateContainer::SetLayer(ESyStateLayer Layer, const FSyStateCategories& NewState)
+{
+	StateLayers.FindOrAdd(Layer) = NewState;
+	InvalidateCache();
+}
+
+void FSyLayeredStateContainer::ClearLayer(ESyStateLayer Layer)
+{
+	if (StateLayers.Remove(Layer) > 0)
+	{
+		InvalidateCache();
+	}
+}
+
+FSyStateCategories FSyLayeredStateContainer::GetEffectiveState() const
+{
+	// 检查缓存是否有效
+	if (CacheVersion == CurrentVersion)
+	{
+		return CachedEffectiveState;
+	}
+
+	// 重新计算有效状态
+	FSyStateCategories Result;
+	
+	// 按优先级从低到高合并 (Default < Persistent < Temporary < Override)
+	for (int32 LayerIndex = 0; LayerIndex < (int32)ESyStateLayer::MAX; ++LayerIndex)
+	{
+		ESyStateLayer CurrentLayer = static_cast<ESyStateLayer>(LayerIndex);
+		if (const FSyStateCategories* LayerState = StateLayers.Find(CurrentLayer))
+		{
+			Result.MergeWith(*LayerState);
+		}
+	}
+
+	// 更新缓存
+	CachedEffectiveState = Result;
+	CacheVersion = CurrentVersion;
+
+	return Result;
+}
+
+bool FSyLayeredStateContainer::HasDataInLayer(ESyStateLayer Layer) const
+{
+	if (const FSyStateCategories* LayerState = StateLayers.Find(Layer))
+	{
+		return !LayerState->GetStateDataMap().IsEmpty();
+	}
+	return false;
+}
+
+void FSyLayeredStateContainer::ClearAllLayers()
+{
+	StateLayers.Empty();
+	InvalidateCache();
+}
+
+void FSyLayeredStateContainer::ApplyParameterSetToLayer(ESyStateLayer Layer, const FSyStateParameterSet& ParamSet)
+{
+	FSyStateCategories& LayerState = GetLayer(Layer);
+	LayerState.UpdateFromParameterMap(ParamSet.GetParametersAsMap());
+	InvalidateCache();
+}
+
+void FSyLayeredStateContainer::InvalidateCache()
+{
+	++CurrentVersion;
+}
+
 
