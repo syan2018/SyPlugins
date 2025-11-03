@@ -34,45 +34,45 @@ void USyStateComponent::BeginPlay()
         }
     }
 
-    // 查找并缓存EntityComponent
+    // BeginPlay 不做任何初始化，只做基础检查
+    // 所有初始化逻辑都在 OnSyComponentInitialized() 中完成
+}
+
+void USyStateComponent::OnSyComponentInitialized()
+{
+    // ✅ 统一初始化入口：所有初始化逻辑都在这里完成
+    
+    // 1. 查找并缓存 EntityComponent
     FindAndCacheEntityComponent();
 
-    // 应用默认初始化数据到本地状态，但暂不广播
-    // 广播将在 OnSyComponentInitialized() 中进行，确保所有组件都准备好
-    UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applying initialization data to Default layer (no broadcast yet)."), *GetNameSafe(GetOwner()));
+    // 2. 应用默认初始化数据到本地状态
+    UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applying initialization data to Default layer."), *GetNameSafe(GetOwner()));
     LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Default, DefaultInitData);
 
-    // 如果启用全局同步，连接到 StateManager 并应用全局状态
+    // 3. 如果启用全局同步，连接到 StateManager 并应用全局状态
     if (bEnableGlobalSync)
     {
         TryConnectToStateManager();
         if (StateManagerSubsystem)
         {
-            ApplyAggregatedModifications(); // Apply initial global state (这里会调用 Broadcast)
+            // 应用全局状态，但不广播（稍后统一广播）
+            FSyStateParameterSet AggregatedMods = StateManagerSubsystem->GetAggregatedModifications(GetTargetTypeTag());
+            LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Persistent, AggregatedMods);
+            
+            UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applied global state from StateManager."), *GetNameSafe(GetOwner()));
         }
         else 
         { 
-            UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Could not connect to StateManagerSubsystem on BeginPlay."), *GetNameSafe(GetOwner())); 
+            UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Could not connect to StateManagerSubsystem."), *GetNameSafe(GetOwner())); 
         }
     }
-    else 
-    { 
-        UE_LOG(LogSyStateComponent, Log, TEXT("%s: Global sync is disabled."), *GetNameSafe(GetOwner())); 
-    }
     
-    // 标记为已完全初始化（数据已应用，但还不会触发依赖组件的初始化）
+    // 4. 标记为已完全初始化
     bIsFullyInitialized = true;
-}
-
-void USyStateComponent::OnSyComponentInitialized()
-{
-    // StateComponent 作为核心组件，在此处最终广播初始化完成
-    // 这确保了监听 OnEffectiveStateChanged 的组件能在正确的时机收到通知
-    if (bIsFullyInitialized)
-    {
-        UE_LOG(LogSyStateComponent, Log, TEXT("%s: StateComponent fully initialized, broadcasting initial state."), *GetNameSafe(GetOwner()));
-        OnEffectiveStateChanged.Broadcast();
-    }
+    
+    // 5. ✅ 广播初始状态（此时所有 Core 阶段组件都已准备好）
+    UE_LOG(LogSyStateComponent, Log, TEXT("%s: StateComponent fully initialized, broadcasting initial state."), *GetNameSafe(GetOwner()));
+    OnEffectiveStateChanged.Broadcast();
 }
 
 void USyStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)

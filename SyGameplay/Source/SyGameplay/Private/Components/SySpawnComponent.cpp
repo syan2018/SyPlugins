@@ -19,18 +19,18 @@ void USySpawnComponent::BeginPlay()
 
 void USySpawnComponent::OnSyComponentInitialized()
 {
-    // 在统一初始化时才查找和绑定组件
-    // 此时所有 Sy 组件都已准备好
+    // ✅ 统一初始化入口：查找组件、绑定监听、处理初始状态
     FindAndCacheStateComponent();
     
     if (StateComponent)
     {
-        // 绑定状态变化监听
+        // 1. 绑定状态变化监听（监听后续变化）
         StateComponent->OnEffectiveStateChanged.AddUObject(this, &USySpawnComponent::HandleStateChanged);
         
-        // 状态变更会通过 OnEffectiveStateChanged 事件触发 HandleStateChanged
-        // 不需要在这里主动调用
-        UE_LOG(LogSySpawn, Log, TEXT("%s: SpawnComponent initialized and listening to state changes."), *GetNameSafe(GetOwner()));
+        // 2. ✅ 主动处理初始状态（因为 StateComponent 的广播已经在 Core 阶段完成）
+        HandleStateChanged();
+        
+        UE_LOG(LogSySpawn, Log, TEXT("%s: SpawnComponent initialized, processed initial state, and listening to state changes."), *GetNameSafe(GetOwner()));
     }
     else
     {

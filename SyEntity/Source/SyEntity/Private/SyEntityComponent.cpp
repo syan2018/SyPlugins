@@ -86,38 +86,25 @@ void USyEntityComponent::InitializeEntity(bool bForceReinitialization)
 
 void USyEntityComponent::InitializeComponentsInOrder()
 {
+    // ✅ 统一初始化流程：所有组件都通过 OnSyComponentInitialized() 初始化
+    
     // 1. 初始化 Identity 组件（无依赖）
     if (IdentityComponent)
     {
         IdentityComponent->GenerateEntityId();
         
-        // 如果IdentityComponent已经有ID，则直接触发ID就绪事件
         if (IdentityComponent->GetEntityId().IsValid())
         {
             HandleEntityIdReady();
         }
     }
     
-    // 2. 初始化 Message 组件（依赖 Identity）
-    if (MessageComponent && IdentityComponent)
-    {
-        // MessageComponent 已经在 BeginPlay 中会自动获取 Identity
-        // 这里可以添加额外的初始化逻辑（如果需要）
-    }
-    
-    // 3. 初始化 State 组件（依赖 EntityComponent）
-    if (StateComponent)
-    {
-        // StateComponent 在其自己的 BeginPlay 中会初始化
-        // 由于我们确保了 EntityComponent 先初始化，时序已正确
-    }
-    
-    // 4. 绑定所有组件的委托
+    // 2. 绑定组件委托（为后续状态广播做准备）
     BindComponentDelegates();
     
-    // 5. 按阶段顺序初始化所有 Sy 组件
-    //    Core: StateComponent 先初始化并广播初始状态
-    //    Functional: Interaction, Spawn 等功能组件接收状态并初始化
+    // 3. ✅ 按阶段顺序初始化所有 Sy 组件
+    //    Phase::Core (0)        - StateComponent 初始化数据并广播初始状态
+    //    Phase::Functional (100) - Interaction/Spawn 组件处理初始状态
     InitializeSyComponentsByPhase();
 }
 
@@ -237,15 +224,9 @@ void USyEntityComponent::BindComponentDelegates()
     {
         // 先移除旧的绑定（如果有的话），防止重复绑定
         StateComponent->OnEffectiveStateChanged.RemoveAll(this);
-        // 添加新的绑定
+        // 添加新的绑定 - EntityComponent 也需要监听状态变化
         StateComponent->OnEffectiveStateChanged.AddUObject(this, &USyEntityComponent::HandleLocalStateDataChanged);
     }
-
-    // TODO: 绑定其他组件（如 IdentityComponent）的事件
-    // if (IdentityComponent)
-    // {
-    //     IdentityComponent->OnIdReadyDelegate.AddUObject(this, &USyEntityComponent::HandleEntityIdReady); // 假设有这样的委托
-    // }
 }
 
 void USyEntityComponent::HandleLocalStateDataChanged()
