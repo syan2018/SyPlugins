@@ -70,7 +70,7 @@ struct SYSTATECORE_API FSyStateCategories
 	FSyStateCategories() = default;
 
 	/** 状态数据映射：状态标签 -> TagMetadata对象数组 */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyStateCore|EntityState", Transient)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyStateCore|EntityState")
 	TMap<FGameplayTag, FSyStateMetadatas> StateData;
 
 	/** 查找指定标签的第一个指定类型的元数据对象 */
@@ -162,4 +162,25 @@ struct SYSTATECORE_API FSyStateCategories
 	 * @param Other 要合并进来的状态集合 (其状态具有更高优先级)。
 	 */
 	void MergeWith(const FSyStateCategories& Other);
+	
+	/**
+	 * @brief 自定义序列化函数，确保 UObject 元数据正确序列化
+	 */
+	bool Serialize(FArchive& Ar);
+	
+	/**
+	 * @brief 序列化后处理，用于重建对象引用
+	 */
+	void PostSerialize(const FArchive& Ar);
+};
+
+// 添加序列化支持
+template<>
+struct TStructOpsTypeTraits<FSyStateCategories> : public TStructOpsTypeTraitsBase2<FSyStateCategories>
+{
+	enum
+	{
+		WithSerializer = true,
+		WithPostSerialize = true,
+	};
 }; 

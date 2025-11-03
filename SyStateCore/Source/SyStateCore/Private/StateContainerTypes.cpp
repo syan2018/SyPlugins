@@ -207,5 +207,140 @@ void FSyStateCategories::MergeWith(const FSyStateCategories& Other)
     }
 }
 
+bool FSyStateCategories::Serialize(FArchive& Ar)
+{
+	// 标记我们正在处理自定义序列化
+	if (Ar.IsLoading())
+	{
+		// 加载时：读取序列化的数据
+		int32 NumEntries = 0;
+		Ar << NumEntries;
+		
+		StateData.Empty(NumEntries);
+		
+		for (int32 i = 0; i < NumEntries; ++i)
+		{
+			// 读取 GameplayTag
+			FGameplayTag Tag;
+			Ar << Tag;
+			
+			// 读取元数据数组大小
+			int32 NumMetadata = 0;
+			Ar << NumMetadata;
+			
+			FSyStateMetadatas& Metadatas = StateData.Add(Tag);
+			Metadatas.MetadataArray.Empty(NumMetadata);
+			
+			// 读取每个元数据对象
+			for (int32 j = 0; j < NumMetadata; ++j)
+			{
+				// 读取对象类路径
+				FString ClassPath;
+				Ar << ClassPath;
+				
+				if (ClassPath.IsEmpty())
+				{
+					UE_LOG(LogSyStateCategories, Warning, TEXT("Serialize (Load): Empty class path for metadata object %d in tag %s"), j, *Tag.ToString());
+					continue;
+				}
+				
+				// 尝试加载类
+				UClass* MetadataClass = LoadObject<UClass>(nullptr, *ClassPath);
+				if (!MetadataClass)
+				{
+					UE_LOG(LogSyStateCategories, Error, TEXT("Serialize (Load): Failed to load metadata class: %s"), *ClassPath);
+					continue;
+				}
+				
+				// 创建新的元数据对象
+				UO_TagMetadata* NewMetadata = NewObject<UO_TagMetadata>(GetTransientPackage(), MetadataClass);
+				if (!NewMetadata)
+				{
+					UE_LOG(LogSyStateCategories, Error, TEXT("Serialize (Load): Failed to create metadata object of class %s"), *ClassPath);
+					continue;
+				}
+				
+				// 序列化对象的属性
+				NewMetadata->Serialize(Ar);
+				
+				// 添加到数组
+				Metadatas.MetadataArray.Add(NewMetadata);
+			}
+		}
+		
+		UE_LOG(LogSyStateCategories, Verbose, TEXT("Serialize (Load): Loaded %d state categories with total metadata objects"), NumEntries);
+	}
+	else if (Ar.IsSaving())
+	{
+		// 保存时：写入序列化数据
+		int32 NumEntries = StateData.Num();
+		Ar << NumEntries;
+		
+		for (const auto& Pair : StateData)
+		{
+			// 写入 GameplayTag
+			FGameplayTag Tag = Pair.Key;
+			Ar << Tag;
+			
+			// 写入元数据数组大小
+			const FSyStateMetadatas& Metadatas = Pair.Value;
+			int32 NumMetadata = Metadatas.MetadataArray.Num();
+			Ar << NumMetadata;
+			
+			// 写入每个元数据对象
+			for (const TObjectPtr<UO_TagMetadata>& MetadataPtr : Metadatas.MetadataArray)
+			{
+				if (MetadataPtr)
+				{
+					// 写入对象类路径
+					FString ClassPath = MetadataPtr->GetClass()->GetPathName();
+					Ar << ClassPath;
+					
+					// 序列化对象的属性
+					MetadataPtr->Serialize(Ar);
+				}
+				else
+				{
+					// Null 对象 - 写入空字符串
+					FString EmptyPath;
+					Ar << EmptyPath;
+					UE_LOG(LogSyStateCategories, Warning, TEXT("Serialize (Save): Null metadata object in tag %s"), *Tag.ToString());
+				}
+			}
+		}
+		
+		UE_LOG(LogSyStateCategories, Verbose, TEXT("Serialize (Save): Saved %d state categories"), NumEntries);
+	}
+	
+	return true;
+}
+
+void FSyStateCategories::PostSerialize(const FArchive& Ar)
+{
+	if (Ar.IsLoading())
+	{
+		// 加载后的后处理：确保所有元数据对象的 StateTag 正确设置
+		for (auto& Pair : StateData)
+		{
+			const FGameplayTag& StateTag = Pair.Key;
+			FSyStateMetadatas& Metadatas = Pair.Value;
+			
+			for (TObjectPtr<UO_TagMetadata>& MetadataPtr : Metadatas.MetadataArray)
+			{
+				if (USyStateMetadataBase* StateMetadata = Cast<USyStateMetadataBase>(MetadataPtr))
+				{
+					// 确保 StateTag 正确
+					if (StateMetadata->GetStateTag() != StateTag)
+					{
+						StateMetadata->SetStateTag(StateTag);
+						UE_LOG(LogSyStateCategories, Verbose, TEXT("PostSerialize: Fixed StateTag for metadata in tag %s"), *StateTag.ToString());
+					}
+				}
+			}
+		}
+		
+		UE_LOG(LogSyStateCategories, Log, TEXT("PostSerialize: Completed post-serialization for %d state categories"), StateData.Num());
+	}
+}
 
 

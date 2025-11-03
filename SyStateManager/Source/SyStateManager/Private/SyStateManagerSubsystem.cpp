@@ -47,10 +47,39 @@ bool USyStateManagerSubsystem::RecordOperation(const FSyOperation& Operation)
     // 2. 创建记录
     FSyStateModificationRecord NewRecord(Operation);
 
-    // 3. 添加到日志并广播
-    AddRecordAndBroadcast(NewRecord);
+    // 3. 添加到日志
+    int32 NewIndex = ModificationLog.Num();
+    ModificationLog.Add(NewRecord);
+    
+    // 4. 更新索引
+    // 4.1 按目标类型索引
+    if (Operation.Target.TargetTypeTag.IsValid())
+    {
+        TArray<int32>& Indices = TargetTypeIndex.FindOrAdd(Operation.Target.TargetTypeTag);
+        Indices.Add(NewIndex);
+    }
+    
+    // 4.2 按操作ID索引
+    if (Operation.OperationId.IsValid())
+    {
+        OperationIdIndex.Add(Operation.OperationId, NewIndex);
+    }
+    
+    // 5. 使相关缓存失效
+    if (Operation.Target.TargetTypeTag.IsValid())
+    {
+        CacheVersions.Remove(Operation.Target.TargetTypeTag);
+        GlobalVersion++;
+    }
+    
+    // 6. 广播事件
+    if (OnStateModificationChanged.IsBound())
+    {
+        OnStateModificationChanged.Broadcast(NewRecord);
+    }
 
-    // UE_LOG(LogSyStateManager, Verbose, TEXT("Operation recorded. RecordId: %s, OperationId: %s"), *NewRecord.RecordId.ToString(), *Operation.OperationId.ToString());
+    UE_LOG(LogSyStateManager, VeryVerbose, TEXT("✅ Operation recorded. RecordId: %s, OperationId: %s, Target: %s"), 
+        *NewRecord.RecordId.ToString(), *Operation.OperationId.ToString(), *Operation.Target.TargetTypeTag.ToString());
     return true;
 }
 
@@ -62,29 +91,81 @@ bool USyStateManagerSubsystem::UnloadOperation(const FGuid& OperationIdToUnload)
         return false;
     }
 
-    int32 FoundIndex = ModificationLog.IndexOfByPredicate(
-        [&](const FSyStateModificationRecord& Record){ return Record.Operation.OperationId == OperationIdToUnload; });
-
-    if (FoundIndex != INDEX_NONE)
-    {
-        FSyStateModificationRecord RecordCopy = ModificationLog[FoundIndex]; // Make a copy before removal
-        ModificationLog.RemoveAtSwap(FoundIndex); // Use RemoveAtSwap for efficiency
-        
-        UE_LOG(LogSyStateManager, Log, TEXT("Unloaded operation with ID: %s"), *OperationIdToUnload.ToString());
-        
-        // Broadcast the change using the unified delegate
-        if (OnStateModificationChanged.IsBound())
-        {
-            OnStateModificationChanged.Broadcast(RecordCopy); // Broadcast the removed record
-        }
-        return true;
-    }
-    else
+    // 使用索引快速查找
+    const int32* FoundIndexPtr = OperationIdIndex.Find(OperationIdToUnload);
+    if (!FoundIndexPtr)
     {
         UE_LOG(LogSyStateManager, Log, TEXT("UnloadOperation: Operation with ID %s not found in log."), *OperationIdToUnload.ToString());
+        return false;
     }
 
-    return false;
+    int32 FoundIndex = *FoundIndexPtr;
+    if (!ModificationLog.IsValidIndex(FoundIndex))
+    {
+        UE_LOG(LogSyStateManager, Error, TEXT("UnloadOperation: Invalid index %d for operation ID %s"), FoundIndex, *OperationIdToUnload.ToString());
+        OperationIdIndex.Remove(OperationIdToUnload);
+        return false;
+    }
+
+    // 保存副本用于广播
+    FSyStateModificationRecord RecordCopy = ModificationLog[FoundIndex];
+    FGameplayTag TargetTag = RecordCopy.Operation.Target.TargetTypeTag;
+    
+    // 从日志中移除（使用 RemoveAtSwap 提高效率）
+    ModificationLog.RemoveAtSwap(FoundIndex);
+    
+    // 更新索引 - 由于使用了 RemoveAtSwap，需要更新被交换的元素的索引
+    if (ModificationLog.IsValidIndex(FoundIndex))
+    {
+        // 被交换到当前位置的记录需要更新索引
+        const FSyStateModificationRecord& SwappedRecord = ModificationLog[FoundIndex];
+        
+        // 更新操作ID索引
+        if (SwappedRecord.Operation.OperationId.IsValid())
+        {
+            OperationIdIndex.Add(SwappedRecord.Operation.OperationId, FoundIndex);
+        }
+        
+        // 更新目标类型索引
+        if (SwappedRecord.Operation.Target.TargetTypeTag.IsValid())
+        {
+            TArray<int32>* IndicesPtr = TargetTypeIndex.Find(SwappedRecord.Operation.Target.TargetTypeTag);
+            if (IndicesPtr)
+            {
+                int32 OldIndex = IndicesPtr->Find(ModificationLog.Num()); // 原来的最后一个索引
+                if (OldIndex != INDEX_NONE)
+                {
+                    (*IndicesPtr)[OldIndex] = FoundIndex;
+                }
+            }
+        }
+    }
+    
+    // 从索引中移除被卸载的操作
+    OperationIdIndex.Remove(OperationIdToUnload);
+    
+    if (TargetTag.IsValid())
+    {
+        TArray<int32>* IndicesPtr = TargetTypeIndex.Find(TargetTag);
+        if (IndicesPtr)
+        {
+            IndicesPtr->Remove(FoundIndex);
+        }
+        
+        // 使缓存失效
+        CacheVersions.Remove(TargetTag);
+        GlobalVersion++;
+    }
+    
+    UE_LOG(LogSyStateManager, Log, TEXT("✅ Unloaded operation with ID: %s"), *OperationIdToUnload.ToString());
+    
+    // 广播变更
+    if (OnStateModificationChanged.IsBound())
+    {
+        OnStateModificationChanged.Broadcast(RecordCopy);
+    }
+    
+    return true;
 }
 
 // TODO: 替换为标准过滤规则，现在没用到所以懒得整
@@ -131,103 +212,130 @@ int32 USyStateManagerSubsystem::UnloadOperationsBySource(const FSyOperationSourc
 
 FSyStateParameterSet USyStateManagerSubsystem::GetAggregatedModifications(const FGameplayTag& TargetFilterTag /* TODO: 添加 SourceFilterTag */) const
 {
+    // ===== 缓存检查 =====
+    if (TargetFilterTag.IsValid())
+    {
+        // 检查缓存是否有效
+        const FSyStateParameterSet* CachedResult = AggregatedCache.Find(TargetFilterTag);
+        const int32* CachedVersion = CacheVersions.Find(TargetFilterTag);
+        
+        if (CachedResult && CachedVersion && *CachedVersion == GlobalVersion)
+        {
+            UE_LOG(LogSyStateManager, VeryVerbose, TEXT("⚡ Cache hit for target tag: %s"), *TargetFilterTag.ToString());
+            return *CachedResult;
+        }
+    }
+
+    UE_LOG(LogSyStateManager, VeryVerbose, TEXT("Cache miss for target tag: %s, computing aggregation..."), 
+        TargetFilterTag.IsValid() ? *TargetFilterTag.ToString() : TEXT("Invalid"));
+
     FSyStateParameterSet AggregatedResult;
-    // 使用一个临时的Map来聚合参数，处理覆盖逻辑
     TMap<FGameplayTag, TArray<FInstancedStruct>> AggregatedParamsMap;
 
-    // TODO: [拓展] 性能考量: 如果 ModificationLog 非常大，此线性扫描可能成为瓶颈。
-    for (const FSyStateModificationRecord& Record : ModificationLog)
+    // ===== 使用索引优化查询 =====
+    // 如果提供了目标类型过滤，使用索引只遍历相关记录
+    if (TargetFilterTag.IsValid())
     {
-        // --- 筛选阶段 ---
-        // 1. TODO: [拓展] 源筛选
-
-        // 2. 目标类型筛选
-        if (TargetFilterTag.IsValid() && Record.Operation.Target.TargetTypeTag != TargetFilterTag)
+        const TArray<int32>* IndicesPtr = TargetTypeIndex.Find(TargetFilterTag);
+        if (IndicesPtr)
         {
-            continue;
-        }
-
-        // 3. TODO: [拓展] 更复杂的目标参数匹配
-
-        // --- 聚合阶段 ---
-        // 将当前记录的 Modifier 参数合并到临时 Map 中
-        // 后出现的记录会覆盖或合并先出现的记录中相同 StateTag 的条目
-        // TODO: 处理冲突逻辑，相同来源覆盖、不同来源互斥
-        // 不过在这里处理，异步会不会爆炸啊，最好在Record时就？最好套个TryGet方法检查冲突
-        for (const auto& Pair : Record.Operation.Modifier.StateModifications.GetParametersAsMap())
-        {
-            const FGameplayTag& StateTag = Pair.Key;
-            const TArray<FInstancedStruct>& ParamsToMerge = Pair.Value;
-
-            // 查找临时 Map 中是否已有该 StateTag 的条目
-            TArray<FInstancedStruct>& ExistingParams = AggregatedParamsMap.FindOrAdd(StateTag);
-
-            // 遍历当前记录中该 StateTag 下的所有待合并参数
-            for (const FInstancedStruct& SourceStruct : ParamsToMerge)
+            for (int32 Index : *IndicesPtr)
             {
-                if (!SourceStruct.IsValid()) continue; // 跳过无效的源结构体
-
-                const UScriptStruct* StructType = SourceStruct.GetScriptStruct();
-                if (!StructType) continue; // 跳过没有 ScriptStruct 的情况
-
-                // 尝试在 ExistingParams 中查找具有相同类型的结构体
-                FInstancedStruct* TargetStructPtr = ExistingParams.FindByPredicate(
-                    [&StructType](const FInstancedStruct& ExistingStruct)
-                    {
-                        return ExistingStruct.IsValid() && ExistingStruct.GetScriptStruct() == StructType;
-                    });
-
-                // 如果找到了相同类型的参数
-                if (TargetStructPtr)
+                if (!ModificationLog.IsValidIndex(Index))
                 {
-                    const UScriptStruct* ListBaseType = FSyListParameterBase::StaticStruct(); // 获取列表基类类型
-
-                    // --- 检查是否为列表类型并应用列表聚合逻辑 ---
-                    // （这里的 StructType 是 SourceStruct.GetScriptStruct()）
-                    if (StructType && StructType->IsChildOf(ListBaseType) && TargetStructPtr->GetScriptStruct()->IsChildOf(ListBaseType)) // 确保目标和源都是列表类型
-                    {
-                        UE_LOG(LogSyStateManager, Verbose, TEXT("Aggregating list type %s using virtual aggregation logic."), *StructType->GetName());
-
-                        // 获取目标和源的可变/常量基类指针
-                        FSyListParameterBase* TargetListBase = TargetStructPtr->GetMutablePtr<FSyListParameterBase>();
-                        const FSyListParameterBase* SourceListBase = SourceStruct.GetPtr<FSyListParameterBase>();
-
-                        if (TargetListBase && SourceListBase)
-                        {
-                            // 通过虚函数获取源列表项
-                            const TArray<FInstancedStruct>& ItemsToAggregate = SourceListBase->GetListItemsInternal();
-                            // 通过虚函数执行聚合
-                            TargetListBase->AggregateItemsInternal(ItemsToAggregate);
-                        }
-                        else
-                        {
-                            // 如果类型转换失败，记录警告并回退到覆盖
-                            UE_LOG(LogSyStateManager, Warning, TEXT("Failed to get FSyListParameterBase pointers for aggregation for type: %s. Falling back to overwrite."), *StructType->GetName());
-                            *TargetStructPtr = SourceStruct;
-                        }
-                    }
-                    // --- （可选）处理其他需要特殊聚合的非列表类型 ---
-                    // --- 默认行为：对于非列表且无特殊规则的类型，直接覆盖 ---
-                    else
-                    {
-                        UE_LOG(LogSyStateManager, Verbose, TEXT("Aggregating non-list type %s using default behavior (overwrite)."), *StructType->GetName());
-                        *TargetStructPtr = SourceStruct;
-                    }
+                    UE_LOG(LogSyStateManager, Warning, TEXT("Invalid index %d found in TargetTypeIndex for tag %s"), 
+                        Index, *TargetFilterTag.ToString());
+                    continue;
                 }
-                // 如果没有找到相同类型的参数
-                else
-                {
-                    // 直接将新的参数添加到 ExistingParams 数组中
-                    ExistingParams.Add(SourceStruct);
-                }
+                
+                const FSyStateModificationRecord& Record = ModificationLog[Index];
+                AggregateRecordModifications(Record, AggregatedParamsMap);
             }
+        }
+    }
+    else
+    {
+        // 没有过滤条件时，遍历所有记录（保持向后兼容）
+        for (const FSyStateModificationRecord& Record : ModificationLog)
+        {
+            AggregateRecordModifications(Record, AggregatedParamsMap);
         }
     }
     
     // 将聚合后的 Map 赋值给结果结构体
     AggregatedResult = AggregatedParamsMap;
 
+    // ===== 更新缓存 =====
+    if (TargetFilterTag.IsValid())
+    {
+        // 使用 const_cast 绕过 const 限制（这是合理的，因为缓存不影响逻辑结果）
+        USyStateManagerSubsystem* MutableThis = const_cast<USyStateManagerSubsystem*>(this);
+        MutableThis->AggregatedCache.Add(TargetFilterTag, AggregatedResult);
+        MutableThis->CacheVersions.Add(TargetFilterTag, GlobalVersion);
+        
+        UE_LOG(LogSyStateManager, Verbose, TEXT("✅ Cached aggregation result for target tag: %s (Version: %d)"), 
+            *TargetFilterTag.ToString(), GlobalVersion);
+    }
+
     return AggregatedResult;
+}
+
+// 辅助方法：聚合单个记录的修改
+void USyStateManagerSubsystem::AggregateRecordModifications(
+    const FSyStateModificationRecord& Record,
+    TMap<FGameplayTag, TArray<FInstancedStruct>>& OutAggregatedMap) const
+{
+    for (const auto& Pair : Record.Operation.Modifier.StateModifications.GetParametersAsMap())
+    {
+        const FGameplayTag& StateTag = Pair.Key;
+        const TArray<FInstancedStruct>& ParamsToMerge = Pair.Value;
+
+        TArray<FInstancedStruct>& ExistingParams = OutAggregatedMap.FindOrAdd(StateTag);
+
+        for (const FInstancedStruct& SourceStruct : ParamsToMerge)
+        {
+            if (!SourceStruct.IsValid()) continue;
+
+            const UScriptStruct* StructType = SourceStruct.GetScriptStruct();
+            if (!StructType) continue;
+
+            FInstancedStruct* TargetStructPtr = ExistingParams.FindByPredicate(
+                [&StructType](const FInstancedStruct& ExistingStruct)
+                {
+                    return ExistingStruct.IsValid() && ExistingStruct.GetScriptStruct() == StructType;
+                });
+
+            if (TargetStructPtr)
+            {
+                const UScriptStruct* ListBaseType = FSyListParameterBase::StaticStruct();
+
+                if (StructType && StructType->IsChildOf(ListBaseType) && TargetStructPtr->GetScriptStruct()->IsChildOf(ListBaseType))
+                {
+                    FSyListParameterBase* TargetListBase = TargetStructPtr->GetMutablePtr<FSyListParameterBase>();
+                    const FSyListParameterBase* SourceListBase = SourceStruct.GetPtr<FSyListParameterBase>();
+
+                    if (TargetListBase && SourceListBase)
+                    {
+                        const TArray<FInstancedStruct>& ItemsToAggregate = SourceListBase->GetListItemsInternal();
+                        TargetListBase->AggregateItemsInternal(ItemsToAggregate);
+                    }
+                    else
+                    {
+                        UE_LOG(LogSyStateManager, Warning, TEXT("Failed to get FSyListParameterBase pointers for aggregation for type: %s. Falling back to overwrite."), *StructType->GetName());
+                        *TargetStructPtr = SourceStruct;
+                    }
+                }
+                else
+                {
+                    *TargetStructPtr = SourceStruct;
+                }
+            }
+            else
+            {
+                ExistingParams.Add(SourceStruct);
+            }
+        }
+    }
 }
 
 

@@ -120,6 +120,27 @@ private:
     /** 存储所有状态修改记录的日志 (运行时 + 从存档加载) */
     UPROPERTY(Transient)
     TArray<FSyStateModificationRecord> ModificationLog;
+    
+    // ===== 性能优化：索引和缓存 =====
+    
+    /** 按目标类型索引的记录 - 加速查询 
+     *  注意：不能使用 UPROPERTY，因为 UE 不支持嵌套容器 TMap<Tag, TArray<int32>>
+     */
+    TMap<FGameplayTag, TArray<int32>> TargetTypeIndex;
+    
+    /** 按操作ID索引的记录 - 加速卸载操作 */
+    TMap<FGuid, int32> OperationIdIndex;
+    
+    /** 聚合结果缓存 - 避免重复计算 
+     *  注意：不能使用 UPROPERTY，因为缓存是临时数据且包含复杂类型
+     */
+    TMap<FGameplayTag, FSyStateParameterSet> AggregatedCache;
+    
+    /** 缓存版本号 - 用于缓存失效 */
+    TMap<FGameplayTag, int32> CacheVersions;
+    
+    /** 全局版本号 - 每次记录操作时递增 */
+    int32 GlobalVersion = 0;
 
     /** 定义存档槽位名称 */
     inline static const FString SaveSlotName = TEXT("SyStateManagerLog");
@@ -138,9 +159,17 @@ private:
      * @return 如果操作有效，返回true。
      */
     virtual bool ValidateOperation(const FSyOperation& Operation) const;
+    
+    /**
+     * @brief 聚合单个记录的修改到输出Map中（内部辅助方法）
+     * @param Record 要聚合的记录
+     * @param OutAggregatedMap 输出的聚合Map
+     */
+    void AggregateRecordModifications(
+        const FSyStateModificationRecord& Record,
+        TMap<FGameplayTag, TArray<FInstancedStruct>>& OutAggregatedMap) const;
 
     // TODO: [拓展] 日志管理
     // - 日志大小限制与清理策略
-    // - 性能优化 (索引等)
     // - 考虑更频繁或更智能的保存时机（例如，定期、特定事件触发）
 }; 
