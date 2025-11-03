@@ -1,13 +1,13 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "States/SyStateComponent.h"
-#include "SyStateManager/Public/SyStateManagerSubsystem.h" // 包含 StateManager 子系统
+#include "Manager/SyStateManagerSubsystem.h" // 包含 StateManager 子系统
 #include "SyEntityComponent.h" // Include Entity Component
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Logging/LogMacros.h"
-#include "StateContainerTypes.h" // Included via header, but good practice
-#include "StateParameterTypes.h" // Included via header, but good practice
+#include "Core/StateContainerTypes.h" // Included via header, but good practice
+#include "Core/StateParameterTypes.h" // Included via header, but good practice
 #include "Engine/GameInstance.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSyStateComponent, Log, All); // 添加日志分类

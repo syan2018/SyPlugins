@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "StateMetadataTypes.h"
+#include "Core/StateMetadataTypes.h"
 #include "SyGameplayInteractValueTypes.h" // The value type FSyInteractionListValue
 #include "SyGameplayInteractMetadatas.generated.h"
 

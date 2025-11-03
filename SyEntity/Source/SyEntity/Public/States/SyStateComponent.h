@@ -3,9 +3,9 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
-#include "SyStateCore.h" 
+#include "SyStateSystem.h" 
 #include "SyEntityComponent.h"
-#include "SyStateManager/Public/StateModificationRecord.h" // 包含 FSyStateModificationRecord
+#include "Manager/StateModificationRecord.h" // 包含 FSyStateModificationRecord
 #include "SyCore/Public/Components/ISyComponentInterface.h"
 #include "SyStateComponent.generated.h"
 

@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "Nodes/StateOperations/SyFlowNode_ApplyStateOperation_Simple.h"
-#include "OperationTypes.h"
+#include "Operations/OperationTypes.h"
 
 FSyOperationSource USyFlowNode_ApplyStateOperation_Simple::GetOperationSource() const
 {

@@ -1,7 +1,7 @@
 #include "Nodes/StateOperations/SyFlowNode_StateOperationBase.h"
 
 #include "FlowSubsystem.h"
-#include "SyStateManager/Public/SyStateManagerSubsystem.h"
+#include "Manager/SyStateManagerSubsystem.h"
 #include "Engine/World.h"
 #include "Logging/LogMacros.h"
 #include "Engine/GameInstance.h"

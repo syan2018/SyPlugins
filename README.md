@@ -47,39 +47,49 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
    - 定义部分核心数据结构
    - 作为所有其他SyPlugins模块的基础依赖
 
-2. **SyStateCore**
-   - 状态系统的核心数据定义
-   - 定义实体状态的数据结构（FSyStateCategories）
-   - 提供状态编辑器配置支持（FSyStateParameterSet）
-   - 定义各种状态元数据类（拓展UO_TagMetadata）
+2. **SyStateSystem**（统一状态管理系统，整合了原 SyStateCore、SyOperation、SyStateManager）
+   - **Core 子系统**: 状态系统的核心数据定义
+     - 定义实体状态的数据结构（FSyStateCategories）
+     - 提供状态编辑器配置支持（FSyStateParameterSet）
+     - 定义各种状态元数据类（拓展UO_TagMetadata）
+     - 支持分层状态管理（FSyLayeredStateContainer）
+   - **Operations 子系统**: 状态操作定义
+     - 定义状态变更操作的数据结构（FSyOperation）
+     - 提供参数Schema系统
+     - 实现常用参数结构体
+     - 支持编辑器配置和验证
+   - **Manager 子系统**: 状态管理中心
+     - 提供状态变更记录和分发机制
+     - 实现状态同步的权威来源
+     - 管理状态变更记录（FSyStateModificationRecord）
+     - 提供状态查询和事件通知
+     - 智能订阅和性能优化
 
-3. **SyStateManager**
-   - 状态管理的中心化模块
-   - 提供状态变更记录和分发机制
-   - 实现状态同步的权威来源
-   - 管理状态变更记录（FSyStateModificationRecord）
-   - 提供状态查询和事件通知
-
-4. **SyOperation**
-   - 状态操作定义模块
-   - 定义状态变更操作的数据结构
-   - 提供参数Schema系统
-   - 实现常用参数结构体
-   - 支持编辑器配置和验证
-
-5. **SyEntity**
+3. **SyEntity**
    - 通用实体框架模块
    - 提供基于组件的实体管理框架
    - 实现实体状态管理（通过SyStateComponent）
    - 支持非侵入式的Actor扩展
    - 提供实体注册和查询功能
 
-6. **SyFlowImpl**
+4. **SyFlowImpl**
    - Flow插件实现模块
    - 提供SyPlugins功能的图形化节点
    - 实现消息系统的Flow节点集成
    - 支持实体控制的Flow节点（计划中）
    - 使SyPlugins功能更易于组合和使用
+
+5. **SyGameplay**
+   - 基础Gameplay玩法框架
+   - 构建在SyEntity之上的具体游戏交互系统
+   - 提供实体交互等高层功能
+   - 当前简单实现触发器、通用交互等
+
+6. **SyQuest**（计划中）
+   - 任务系统实现（迭代当前FlowExtension实现）
+   - 基于状态、触发和监听实现统一任务更新
+   - 提供任务逻辑和状态管理
+   - 包括对TagFacts系统的导入和重构
 
 7. **SyPluginsImpl**
    - 插件实现示例模块
@@ -87,52 +97,11 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
    - 提供具体功能实现参考
    - 展示模块间的集成方式
 
-8. **SyGameplay**
-   - 基础Gameplay玩法框架
-   - 构建在SyEntity之上的具体游戏交互系统
-   - 提供实体交互等高层功能
-   - 当前简单实现触发器、通用交互等
-
-9. **SyQuest**（计划中）
-   - 任务系统实现（迭代当前FlowExtension实现）
-   - 基于状态、触发和监听实现统一任务更新
-   - 提供任务逻辑和状态管理
-   - 包括对TagFacts系统的导入和重构
-
 各模块详细介绍详见模块下 README.md 项目结构可能存在拆的太细之嫌，还请见谅
-
-
-## 📝 最近更新
-
-### 2025-11-03 重大重构
-基于架构分析完成了系统性重构，详见 [重构记录](Docs/RefactoringChanges_2025-11-03.md)
-
-**核心改进**:
-- ✅ 实现状态层级系统（Default/Persistent/Temporary/Override）
-- ✅ StateManager 增量聚合快照机制（性能提升 85%）
-- ✅ EntityComponent 两阶段初始化（消除竞态条件）
-- ✅ 语义化接口区分消息和状态（MessageBus vs StateManager）
-
-**性能提升**: 状态查询 ⬇️70%，聚合计算 ⬇️88%，内存占用 ⬇️40%
-
----
-
-## TODO
-
-- [x] ~~状态层级系统实现~~
-- [x] ~~聚合快照性能优化~~
-- [x] ~~组件初始化时序优化~~
-- [x] ~~语义化API设计~~
-- [ ] 更新蓝图示例以适配新接口
-- [ ] 添加单元测试覆盖
-- [ ] 编辑器可视化工具
-- [ ] 网络复制支持（如需多人游戏）
-
 
 ## 项目由来
 
 （碎碎念）
-
 
 
 项目思路源自在前司为单机设计，但因空降乐子未能妥善落实的框架。最初的核心思路为 **分层逻辑管理** 与 **消息总线**。

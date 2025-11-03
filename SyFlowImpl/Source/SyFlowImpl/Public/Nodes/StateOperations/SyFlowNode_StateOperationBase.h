@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "OperationTypes.h" // For FSyOperation types
+#include "Operations/OperationTypes.h" // For FSyOperation types
 #include "Nodes/FlowNode.h"
 #include "StructUtils/InstancedStruct.h"
 #include "SyFlowNode_StateOperationBase.generated.h"

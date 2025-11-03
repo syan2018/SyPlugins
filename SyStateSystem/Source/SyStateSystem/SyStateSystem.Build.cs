@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class SyEntity : ModuleRules
+public class SyStateSystem : ModuleRules
 {
-	public SyEntity(ReadOnlyTargetRules Target) : base(Target)
+	public SyStateSystem(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
@@ -29,8 +29,9 @@ public class SyEntity : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"GameplayTags",
-			"SyCore",
-			"SyStateSystem"
+				"StructUtils",
+				"SyCore",
+				"TagMetadata",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -39,8 +40,6 @@ public class SyEntity : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"CoreUObject",
-				"Engine",
 				"Slate",
 				"SlateCore",
 				// ... add private dependencies that you statically link with here ...	
@@ -54,5 +53,11 @@ public class SyEntity : ModuleRules
 				// ... add any modules that your module loads dynamically here ...
 			}
 			);
+
+		if (Target.bBuildEditor == true)
+		{
+			PrivateDependencyModuleNames.Add("UnrealEd");
+			PrivateDependencyModuleNames.Add("PropertyEditor");
+		}
 	}
 }

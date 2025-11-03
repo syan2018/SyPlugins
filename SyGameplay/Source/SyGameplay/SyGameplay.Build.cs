@@ -35,9 +35,9 @@ public class SyGameplay : ModuleRules
 			new string[]
 			{
 				"Core",
-				"SyCore",
-				"SyEntity", 
-				"SyStateCore",
+			"SyCore",
+			"SyEntity", 
+			"SyStateSystem",
 				"AIModule",
 				"GameplayTags",
 				"UMG",

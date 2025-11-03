@@ -1,9 +1,9 @@
 #include "Nodes/Interaction/SyFlowNode_SetupInteraction.h"
 
 #include "FlowLogChannels.h"
-#include "OperationTypes.h" // For Modifier, Source, Params
-#include "Metadatas/BasicMetadataValueTypes.h" // For FSyBoolValue
-#include "Metadatas/SyGameplayInteractValueTypes.h" // For FSyInteractionListValue
+#include "Operations/OperationTypes.h" // For Modifier, Source, Params
+#include "Core/Metadatas/BasicMetadataValueTypes.h" // For FSyBoolValue
+#include "Metadatas/SyGameplayInteractValueTypes.h" // For FSyInteractionListValue (from SyGameplay)
 
 FSyOperationSource USyFlowNode_SetupInteraction::GetOperationSource() const
 {

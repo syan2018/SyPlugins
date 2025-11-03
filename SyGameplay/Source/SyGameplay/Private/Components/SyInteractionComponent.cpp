@@ -2,7 +2,7 @@
 #include "States/SyStateComponent.h"
 #include "GameFramework/Actor.h"
 #include "Logging/LogMacros.h"
-#include "Metadatas/BasicMetadataValueTypes.h"
+#include "Core/Metadatas/BasicMetadataValueTypes.h"
 #include "Metadatas/SyGameplayInteractMetadatas.h"
 #include "Metadatas/SyGameplayInteractValueTypes.h"
 #include "FlowComponent.h"

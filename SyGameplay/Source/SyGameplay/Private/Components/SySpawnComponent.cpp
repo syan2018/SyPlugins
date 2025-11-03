@@ -2,8 +2,8 @@
 #include "States/SyStateComponent.h"
 #include "GameFramework/Actor.h"
 #include "Logging/LogMacros.h"
-#include "Metadatas/BasicMetadataValueTypes.h"
-#include "SyStateCore/Public/StateMetadataTypes.h"
+#include "Core/Metadatas/BasicMetadataValueTypes.h"
+#include "Core/StateMetadataTypes.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSySpawn, Log, All);
 

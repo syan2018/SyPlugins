@@ -29,9 +29,7 @@ public class SyFlowImpl : ModuleRules
 				"Flow",           
 				"SyCore",         
 				"GameplayTags",  
-				"SyOperation",     // Added for FSyOperation types
-				"SyStateCore",
-				"SyStateManager",  // Added for StateManager interaction
+			"SyStateSystem",  // 统一的状态管理系统
 				"SyGameplay",     // Added for FInstancedStruct
 				"SyEntity",
 				// ... add other public dependencies that you statically link with here ...
