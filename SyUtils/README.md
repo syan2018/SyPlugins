@@ -28,7 +28,7 @@
 - `Get Data Table Value (Int)`
 - `Get Data Table Value (Float)`
 - `Get Data Table Value (Struct)`: **(新增)** 直接获取 DataTable 中某一列的 Struct 数据。
-- `Get Data Table Column (Map)`: **(新增)** 将指定列整体转换成 `RowName -> Value` 的字典，Value 类型由输出 Map 的 Value 类型决定。
+- `Get Data Table Row Columns (Map)`: **(新增)** 输入行名和期望的值类型，自动收集该行中所有类型匹配的列，并返回 `ColumnName -> Value` 字典。
 
 ## 依赖
 - Core
@@ -36,5 +36,6 @@
 - Engine
 
 ## 更新日志
+- **v1.2**: 新增 `Get Data Table Row Columns (Map)`，支持以列名为 Key 提取整条数据。
 - **v1.1**: 新增对 Struct 类型属性的动态访问支持（GetStructPropertyAsStruct, GetDataTableValueAsStruct）。
 - **v1.0**: 初始版本，支持 Struct 和 DataTable 的动态属性访问（基础类型）。

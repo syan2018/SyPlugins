@@ -103,13 +103,13 @@ public:
 	// ========================================================================
 
 	/**
-	 * Extract a whole column from the DataTable as a Map where Key = RowName and Value = Column Value.
-	 * The value type of the map determines the expected column property type.
+	 * Extract all properties from a specific row that share the same type as the Map Value type.
+	 * The resulting map uses ColumnName as the key and the property value as the map value.
 	 */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "SyUtils|DataTable", meta = (CustomStructureParam = "OutColumnMap", MapParam = "OutColumnMap", DisplayName = "Get Data Table Column (Map)"))
-	static bool GetDataTableColumnAsMap(UDataTable* DataTable, FName ColumnName, UPARAM(ref) TMap<FName, int32>& OutColumnMap);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "SyUtils|DataTable", meta = (MapParam = "OutColumnMap", DisplayName = "Get Data Table Row Columns (Map)"))
+	static bool GetDataTableRowColumnsAsMap(UDataTable* DataTable, FName RowName, UPARAM(ref) TMap<FName, int32>& OutColumnMap);
 
-	DECLARE_FUNCTION(execGetDataTableColumnAsMap);
+	DECLARE_FUNCTION(execGetDataTableRowColumnsAsMap);
 
 
 	// ========================================================================
@@ -120,5 +120,5 @@ public:
 	static bool Generic_GetPropertyAsInt(const UScriptStruct* StructDef, const void* ContainerPtr, FName PropertyName, int32& OutValue);
 	static bool Generic_GetPropertyAsFloat(const UScriptStruct* StructDef, const void* ContainerPtr, FName PropertyName, double& OutValue);
 	static bool Generic_GetPropertyAsStruct(const UScriptStruct* StructDef, const void* ContainerPtr, FName PropertyName, const UScriptStruct* OutStructDef, void* OutStructPtr, UScriptStruct*& OutFoundStructType);
-	static bool Generic_GetDataTableColumnAsMap(UDataTable* DataTable, FName ColumnName, const FMapProperty* OutputMapProp, void* OutputMapPtr);
+	static bool Generic_GetDataTableRowColumnsAsMap(UDataTable* DataTable, FName RowName, const FMapProperty* OutputMapProp, void* OutputMapPtr);
 };

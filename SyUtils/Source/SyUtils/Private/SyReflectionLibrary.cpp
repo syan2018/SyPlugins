@@ -2,6 +2,7 @@
 #include "Blueprint/BlueprintExceptionInfo.h"
 #include "Engine/DataTable.h"
 #include "UObject/UnrealType.h"
+#include "UObject/Class.h"
 
 namespace SyReflectionLibraryInternal
 {
@@ -201,10 +202,10 @@ DEFINE_FUNCTION(USyReflectionLibrary::execGetDataTableValueAsStruct)
 }
 
 
-DEFINE_FUNCTION(USyReflectionLibrary::execGetDataTableColumnAsMap)
+DEFINE_FUNCTION(USyReflectionLibrary::execGetDataTableRowColumnsAsMap)
 {
 	P_GET_OBJECT(UDataTable, DataTable);
-	P_GET_PROPERTY(FNameProperty, ColumnName);
+	P_GET_PROPERTY(FNameProperty, RowName);
 
 	// Step over map output (should be Map<FName, T>)
 	Stack.MostRecentPropertyAddress = nullptr;
@@ -222,7 +223,7 @@ DEFINE_FUNCTION(USyReflectionLibrary::execGetDataTableColumnAsMap)
 	}
 
 	P_NATIVE_BEGIN;
-	*(bool*)RESULT_PARAM = Generic_GetDataTableColumnAsMap(DataTable, ColumnName, OutputMapProp, OutputMapAddr);
+	*(bool*)RESULT_PARAM = Generic_GetDataTableRowColumnsAsMap(DataTable, RowName, OutputMapProp, OutputMapAddr);
 	P_NATIVE_END;
 }
 
@@ -370,7 +371,7 @@ bool USyReflectionLibrary::Generic_GetPropertyAsStruct(const UScriptStruct* Stru
 	return true;
 }
 
-bool USyReflectionLibrary::Generic_GetDataTableColumnAsMap(UDataTable* DataTable, FName ColumnName, const FMapProperty* OutputMapProp, void* OutputMapPtr)
+bool USyReflectionLibrary::Generic_GetDataTableRowColumnsAsMap(UDataTable* DataTable, FName RowName, const FMapProperty* OutputMapProp, void* OutputMapPtr)
 {
 	if (!DataTable || !OutputMapProp || !OutputMapPtr)
 	{
@@ -388,19 +389,14 @@ bool USyReflectionLibrary::Generic_GetDataTableColumnAsMap(UDataTable* DataTable
 		return false;
 	}
 
+	uint8* RowData = DataTable->FindRowUnchecked(RowName);
+	if (!RowData)
+	{
+		return false;
+	}
+
 	const UScriptStruct* RowStruct = DataTable->RowStruct;
 	if (!RowStruct)
-	{
-		return false;
-	}
-
-	const FProperty* ColumnProperty = RowStruct->FindPropertyByName(ColumnName);
-	if (!ColumnProperty)
-	{
-		return false;
-	}
-
-	if (!SyReflectionLibraryInternal::ArePropertiesCompatible(ColumnProperty, MapValueProp))
 	{
 		return false;
 	}
@@ -408,11 +404,10 @@ bool USyReflectionLibrary::Generic_GetDataTableColumnAsMap(UDataTable* DataTable
 	FScriptMapHelper MapHelper(OutputMapProp, OutputMapPtr);
 	MapHelper.EmptyValues();
 
-	for (const TPair<FName, uint8*>& RowPair : DataTable->GetRowMap())
+	for (TFieldIterator<FProperty> PropIt(RowStruct); PropIt; ++PropIt)
 	{
-		const FName RowName = RowPair.Key;
-		uint8* RowData = RowPair.Value;
-		if (!RowData)
+		const FProperty* ColumnProperty = *PropIt;
+		if (!SyReflectionLibraryInternal::ArePropertiesCompatible(ColumnProperty, MapValueProp))
 		{
 			continue;
 		}
@@ -421,10 +416,10 @@ bool USyReflectionLibrary::Generic_GetDataTableColumnAsMap(UDataTable* DataTable
 		const int32 PairIndex = MapHelper.AddDefaultValue_Invalid_NeedsRehash();
 		uint8* PairPtr = MapHelper.GetPairPtr(PairIndex);
 
-		// Initialize key (RowName)
+		// Initialize key (Column Name)
 		void* KeyPtr = OutputMapProp->KeyProp->ContainerPtrToValuePtr<void>(PairPtr);
 		OutputMapProp->KeyProp->InitializeValue(KeyPtr);
-		*(FName*)KeyPtr = RowName;
+		*(FName*)KeyPtr = ColumnProperty->GetFName();
 
 		// Initialize value (column data)
 		void* ValuePtr = MapValueProp->ContainerPtrToValuePtr<void>(PairPtr);
