@@ -1,6 +1,46 @@
 #include "SyReflectionLibrary.h"
 #include "Blueprint/BlueprintExceptionInfo.h"
 #include "Engine/DataTable.h"
+#include "UObject/UnrealType.h"
+
+namespace SyReflectionLibraryInternal
+{
+	static bool ArePropertiesCompatible(const FProperty* ColumnProperty, const FProperty* MapValueProperty)
+	{
+		if (!ColumnProperty || !MapValueProperty)
+		{
+			return false;
+		}
+
+		if (const FStructProperty* ColumnStructProp = CastField<FStructProperty>(ColumnProperty))
+		{
+			const FStructProperty* MapStructProp = CastField<FStructProperty>(MapValueProperty);
+			return MapStructProp && ColumnStructProp->Struct == MapStructProp->Struct;
+		}
+
+		return ColumnProperty->GetClass() == MapValueProperty->GetClass();
+	}
+
+	static void CopyValueFromColumn(const FProperty* ColumnProperty, const void* ColumnValuePtr, const FProperty* MapValueProperty, void* MapValuePtr)
+	{
+		if (!ColumnProperty || !ColumnValuePtr || !MapValueProperty || !MapValuePtr)
+		{
+			return;
+		}
+
+		if (const FStructProperty* ColumnStructProp = CastField<FStructProperty>(ColumnProperty))
+		{
+			const FStructProperty* MapStructProp = CastField<FStructProperty>(MapValueProperty);
+			if (MapStructProp && ColumnStructProp->Struct == MapStructProp->Struct)
+			{
+				MapStructProp->Struct->CopyScriptStruct(MapValuePtr, ColumnValuePtr);
+			}
+			return;
+		}
+
+		MapValueProperty->CopySingleValue(MapValuePtr, ColumnValuePtr);
+	}
+}
 
 // ============================================================================
 // Custom Thunks (Struct Access)
@@ -161,6 +201,32 @@ DEFINE_FUNCTION(USyReflectionLibrary::execGetDataTableValueAsStruct)
 }
 
 
+DEFINE_FUNCTION(USyReflectionLibrary::execGetDataTableColumnAsMap)
+{
+	P_GET_OBJECT(UDataTable, DataTable);
+	P_GET_PROPERTY(FNameProperty, ColumnName);
+
+	// Step over map output (should be Map<FName, T>)
+	Stack.MostRecentPropertyAddress = nullptr;
+	Stack.MostRecentProperty = nullptr;
+	Stack.StepCompiledIn<FMapProperty>(NULL);
+	void* OutputMapAddr = Stack.MostRecentPropertyAddress;
+	FMapProperty* OutputMapProp = CastField<FMapProperty>(Stack.MostRecentProperty);
+
+	P_FINISH;
+
+	if (!DataTable || !OutputMapProp || !OutputMapAddr)
+	{
+		*(bool*)RESULT_PARAM = false;
+		return;
+	}
+
+	P_NATIVE_BEGIN;
+	*(bool*)RESULT_PARAM = Generic_GetDataTableColumnAsMap(DataTable, ColumnName, OutputMapProp, OutputMapAddr);
+	P_NATIVE_END;
+}
+
+
 // ============================================================================
 // DataTable Access
 // ============================================================================
@@ -301,5 +367,71 @@ bool USyReflectionLibrary::Generic_GetPropertyAsStruct(const UScriptStruct* Stru
 	// Copy data
 	OutStructDef->CopyScriptStruct(OutStructPtr, SrcPtr);
 	
+	return true;
+}
+
+bool USyReflectionLibrary::Generic_GetDataTableColumnAsMap(UDataTable* DataTable, FName ColumnName, const FMapProperty* OutputMapProp, void* OutputMapPtr)
+{
+	if (!DataTable || !OutputMapProp || !OutputMapPtr)
+	{
+		return false;
+	}
+
+	if (!OutputMapProp->KeyProp || !OutputMapProp->KeyProp->IsA<FNameProperty>())
+	{
+		return false;
+	}
+
+	const FProperty* MapValueProp = OutputMapProp->ValueProp;
+	if (!MapValueProp)
+	{
+		return false;
+	}
+
+	const UScriptStruct* RowStruct = DataTable->RowStruct;
+	if (!RowStruct)
+	{
+		return false;
+	}
+
+	const FProperty* ColumnProperty = RowStruct->FindPropertyByName(ColumnName);
+	if (!ColumnProperty)
+	{
+		return false;
+	}
+
+	if (!SyReflectionLibraryInternal::ArePropertiesCompatible(ColumnProperty, MapValueProp))
+	{
+		return false;
+	}
+
+	FScriptMapHelper MapHelper(OutputMapProp, OutputMapPtr);
+	MapHelper.EmptyValues();
+
+	for (const TPair<FName, uint8*>& RowPair : DataTable->GetRowMap())
+	{
+		const FName RowName = RowPair.Key;
+		uint8* RowData = RowPair.Value;
+		if (!RowData)
+		{
+			continue;
+		}
+
+		const void* ColumnValuePtr = ColumnProperty->ContainerPtrToValuePtr<void>(RowData);
+		const int32 PairIndex = MapHelper.AddDefaultValue_Invalid_NeedsRehash();
+		uint8* PairPtr = MapHelper.GetPairPtr(PairIndex);
+
+		// Initialize key (RowName)
+		void* KeyPtr = OutputMapProp->KeyProp->ContainerPtrToValuePtr<void>(PairPtr);
+		OutputMapProp->KeyProp->InitializeValue(KeyPtr);
+		*(FName*)KeyPtr = RowName;
+
+		// Initialize value (column data)
+		void* ValuePtr = MapValueProp->ContainerPtrToValuePtr<void>(PairPtr);
+		MapValueProp->InitializeValue(ValuePtr);
+		SyReflectionLibraryInternal::CopyValueFromColumn(ColumnProperty, ColumnValuePtr, MapValueProp, ValuePtr);
+	}
+
+	MapHelper.Rehash();
 	return true;
 }

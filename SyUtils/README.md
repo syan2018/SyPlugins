@@ -28,6 +28,7 @@
 - `Get Data Table Value (Int)`
 - `Get Data Table Value (Float)`
 - `Get Data Table Value (Struct)`: **(新增)** 直接获取 DataTable 中某一列的 Struct 数据。
+- `Get Data Table Column (Map)`: **(新增)** 将指定列整体转换成 `RowName -> Value` 的字典，Value 类型由输出 Map 的 Value 类型决定。
 
 ## 依赖
 - Core

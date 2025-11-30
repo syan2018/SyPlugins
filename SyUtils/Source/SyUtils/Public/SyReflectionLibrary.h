@@ -99,6 +99,20 @@ public:
 
 
 	// ========================================================================
+	// DataTable Column Access (Column Map)
+	// ========================================================================
+
+	/**
+	 * Extract a whole column from the DataTable as a Map where Key = RowName and Value = Column Value.
+	 * The value type of the map determines the expected column property type.
+	 */
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "SyUtils|DataTable", meta = (CustomStructureParam = "OutColumnMap", MapParam = "OutColumnMap", DisplayName = "Get Data Table Column (Map)"))
+	static bool GetDataTableColumnAsMap(UDataTable* DataTable, FName ColumnName, UPARAM(ref) TMap<FName, int32>& OutColumnMap);
+
+	DECLARE_FUNCTION(execGetDataTableColumnAsMap);
+
+
+	// ========================================================================
 	// Helpers
 	// ========================================================================
 	
@@ -106,4 +120,5 @@ public:
 	static bool Generic_GetPropertyAsInt(const UScriptStruct* StructDef, const void* ContainerPtr, FName PropertyName, int32& OutValue);
 	static bool Generic_GetPropertyAsFloat(const UScriptStruct* StructDef, const void* ContainerPtr, FName PropertyName, double& OutValue);
 	static bool Generic_GetPropertyAsStruct(const UScriptStruct* StructDef, const void* ContainerPtr, FName PropertyName, const UScriptStruct* OutStructDef, void* OutStructPtr, UScriptStruct*& OutFoundStructType);
+	static bool Generic_GetDataTableColumnAsMap(UDataTable* DataTable, FName ColumnName, const FMapProperty* OutputMapProp, void* OutputMapPtr);
 };
