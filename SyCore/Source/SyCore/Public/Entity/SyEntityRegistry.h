@@ -50,6 +50,13 @@ public:
     USyEntityComponent* GetEntityById(const FGuid& EntityId) const;
 
     /**
+     * @brief 通过别名查找实体组件。
+     * @note 约定：Alias 应在同一 World 内唯一；如出现重复注册，将以“后注册覆盖前者”为准，并输出警告日志。
+     */
+    UFUNCTION(BlueprintPure, Category = "SyEntityRegistry")
+    USyEntityComponent* GetEntityByAlias(FName EntityAlias) const;
+
+    /**
      * @brief 通过类型Tag查找所有匹配的实体组件。
      */
     UFUNCTION(BlueprintPure, Category = "SyEntityRegistry")
@@ -71,6 +78,10 @@ private:
     // 索引结构
     UPROPERTY()
     TMap<FGuid, TObjectPtr<USyEntityComponent>> EntityIdMap;
+
+    /** Alias -> Entity */
+    UPROPERTY()
+    TMap<FName, TObjectPtr<USyEntityComponent>> EntityAliasMap;
 
     UPROPERTY()
     TMap<FGameplayTag, FSyEntityTagIndex> EntityTagMap; // GameplayTag -> 实体标签索引

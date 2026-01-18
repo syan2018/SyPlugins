@@ -61,13 +61,16 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
    - 基于状态、触发和监听实现统一任务更新
    - 提供任务逻辑和状态管理
 
-5. **SyCombat** (计划中)
-   - ARPG 战斗管线模块 (SCPA 架构)
-   - 基于 SyCore Processing 层实现通用的战斗数值处理
-   - 提供输入缓冲、技能判定、结算链等核心战斗机制
-   - 目标是建立一套即插即用的标准化战斗操作系统
+5. **SyCombat**（原型已落地）
+   - ARPG 战斗管线模块（SCPA 架构，流程编排为核心）
+   - **不直接依赖 GAS**：通过适配层对接 Lyra/GAS（预测友好）
+   - 负责收口输入/技能/判定/结算/表现等信息流，重度逻辑下沉到 Adapter/Impl
 
-6. **SyPluginsImpl**
+6. **SyCombatLyraAdapter**（新增）
+   - SyCombat 的 Lyra/GAS 适配层
+   - 提供 ActionTag -> GameplayEventTag 的能力驱动方式，建议与 Lyra AbilitySet/Tag Gate 搭配使用
+
+7. **SyPluginsImpl**
    - 插件实现示例模块
    - 对示例使用的 GameplayTag 结构等进行汇总
    - 提供具体功能实现参考

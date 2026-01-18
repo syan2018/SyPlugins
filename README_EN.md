@@ -55,13 +55,16 @@ The system briefly implements the following logic chain:
    - Achieves unified quest updates based on states, triggers, and listeners.
    - Provides quest logic and state management.
 
-5. **SyCombat** (Planned)
-   - ARPG Combat Pipeline Module (SCPA Architecture).
-   - Implements generic combat numerical processing based on the SyCore Processing layer.
-   - Provides core combat mechanisms like Input Buffering, Skill Detection, and Resolution Chains.
-   - Aims to build a standardized, plug-and-play combat operating system.
+5. **SyCombat** (Prototype available)
+   - ARPG Combat Pipeline module (SCPA, orchestration-first).
+   - **No direct GAS dependency**: integrate via adapters for Lyra/GAS (prediction-friendly).
+   - Focuses on flow orchestration and context aggregation; heavy logic lives in Adapter/Impl.
 
-6. **SyPluginsImpl**
+6. **SyCombatLyraAdapter** (New)
+   - Lyra/GAS adapter layer for SyCombat.
+   - Provides ActionTag -> GameplayEventTag driving pattern designed to work with AbilitySet + Tag Gate.
+
+7. **SyPluginsImpl**
    - Plugin implementation example module.
    - Consolidates structures like GameplayTag used in examples.
    - Provides references for specific function implementations.

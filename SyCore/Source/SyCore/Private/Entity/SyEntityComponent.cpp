@@ -3,8 +3,9 @@
 #include "Messaging/SyMessageComponent.h"
 #include "Entity/SyEntityRegistry.h"
 #include "State/SyStateComponent.h"
-#include "State/SyStateManagerSubsystem.h"
 #include "State/Operations/OperationTypes.h"
+#include "State/SyEntityStateFacadeComponent.h"
+#include "State/SyStateFacadeTypes.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -302,25 +303,49 @@ bool USyEntityComponent::BroadcastEventWithMetadata(const FGameplayTag& EventTyp
 // 持久状态接口（通过 StateManager）
 bool USyEntityComponent::ApplyStateOperation(const FSyOperation& Operation)
 {
-    UWorld* World = GetWorld();
-    if (!World)
+    // 统一入口：如果 Facade 存在，则通过 Facade 路由（避免历史语义直接写入 StateManager）
+    if (USyEntityStateFacadeComponent* Facade = FindSyComponent<USyEntityStateFacadeComponent>())
     {
-        return false;
+        bool bAny = false;
+        bool bAllApplied = true;
+
+        const TMap<FGameplayTag, TArray<FInstancedStruct>> ParamsMap = Operation.Modifier.StateModifications.GetParametersAsMap();
+        for (const auto& Pair : ParamsMap)
+        {
+            const FGameplayTag& StateTag = Pair.Key;
+            const TArray<FInstancedStruct>& Params = Pair.Value;
+
+            for (const FInstancedStruct& Param : Params)
+            {
+                bAny = true;
+
+                FSyStateChangeRequest Request;
+                Request.Scope = ESyStateScope::Type;
+                Request.Layer = ESyStateWriteLayer::Persistent;
+                Request.TargetTypeTag = Operation.Target.TargetTypeTag;
+                Request.TargetEntityId = Operation.Target.TargetEntityId;
+                Request.StateTag = StateTag;
+                Request.Value = Param;
+                Request.SourceSystemTag = Operation.Source.SourceTypeTag;
+
+                if (!Facade->ApplyStateChange(Request))
+                {
+                    bAllApplied = false;
+                }
+            }
+        }
+
+        if (!bAny)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("ApplyStateOperation: no state parameters found in FSyOperation."));
+            return false;
+        }
+
+        return bAllApplied;
     }
-    
-    UGameInstance* GameInstance = World->GetGameInstance();
-    if (!GameInstance)
-    {
-        return false;
-    }
-    
-    USyStateManagerSubsystem* StateManager = GameInstance->GetSubsystem<USyStateManagerSubsystem>();
-    if (!StateManager)
-    {
-        return false;
-    }
-    
-    return StateManager->RecordOperation(Operation);
+
+    UE_LOG(LogTemp, Error, TEXT("ApplyStateOperation: no StateFacade found. Attach USyEntityStateFacadeComponent and a backend component."));
+    return false;
 }
 
 void USyEntityComponent::ApplyTemporaryStateModifications(const FSyStateParameterSet& TempModifications)

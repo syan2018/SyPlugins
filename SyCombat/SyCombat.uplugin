@@ -1,0 +1,28 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "SyCombat",
+  "Description": "SyCombat core pipeline (orchestration-first). No direct GAS dependency; use adapters.",
+  "Category": "SyPlugins",
+  "CreatedBy": "SyPlugins",
+  "Modules": [
+    {
+      "Name": "SyCombat",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "SyGASBridge",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "SyCore",
+      "Enabled": true
+    }
+  ]
+}
+
