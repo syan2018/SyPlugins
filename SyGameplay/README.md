@@ -182,9 +182,7 @@ void AMyActor::HandleBasicInteraction(USyInteractionComponent* InteractionComp)
 
 ## 依赖关系 (Dependencies)
 
-- `SyCore` - 基础设施和组件接口
-- `SyEntity` - 实体框架
-- `SyStateSystem` - 状态管理系统
+- `SyCore` - 核心基础设施（包含 Entity, State System, Messaging, Foundation）
 - `Flow` - Flow图形化流程系统
 - `GameplayTags` - Gameplay标签系统
 - `StructUtils` - 实例化结构体支持

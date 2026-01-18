@@ -14,10 +14,8 @@ SyCore 是 SyPlugins 框架的最基础模块，定义了全局共享的 Gamepla
 
 ## 核心组件与概念 (Core Components & Concepts)
 
+### 1. 基础服务 (Foundation & Infrastructure)
 *   **Gameplay Tags:** 系统范围内的核心标识符，定义于配置文件或数据资产中。
-*   **Identifier (标识系统):**
-    *   实现：通常通过 `SyIdentityComponent`。
-    *   功能：管理实体的唯一 `FGuid` 和可选的 `FName` 别名。
 *   **MessageBus (消息总线):**
     *   实现：包含消息组件（如 `SyMessageComponent`）和中央总线逻辑（`USyMessageBus`）。
     *   消息结构 (`FSyMessage`)：
@@ -25,7 +23,22 @@ SyCore 是 SyPlugins 框架的最基础模块，定义了全局共享的 Gamepla
         *   **内容 (`FSyMessageContent`):** 消息类型GameplayTag + `FInstancedStruct` Payload（支持任意结构化数据）+ 可选元数据键值对。
         *   **元信息:** 时间戳、优先级 (`ESyMessagePriority`)、消息唯一ID。
     *   用途：主要用于事件驱动的逻辑解耦，如 Flow 监听特定消息。
-*   **(Future) `ISyModuleInterface`:** (如果需要) 定义 SyPlugins 模块通用的接口规范。
+
+### 2. 实体系统 (Entity System)
+*   **SyEntityComponent:** 实体的核心组件，作为其他所有Sy组件的挂载点和协调者。
+*   **Identity (标识系统):**
+    *   实现：`SyIdentityComponent`。
+    *   功能：管理实体的唯一 `FGuid` 和可选的 `FName` 别名。
+    *   职责：提供实体的身份识别，支持通过ID或别名查找实体。
+
+### 3. 状态系统 (State System)
+*(原 SyStateSystem, SyOperation 模块已合并至此)*
+*   **SyStateComponent:** 管理实体的状态数据。
+*   **StateManager:** 全局状态管理子系统，负责状态变更的记录、聚合和分发。
+*   **SyOperation:** 定义对状态的操作（来源、目标、修改器）。
+*   **状态数据结构:**
+    *   `FSyStateCategories`: 状态集合。
+    *   `FSyStateParams`: 具体的状态参数。
 
 ## 目录结构
 
@@ -34,18 +47,20 @@ SyCore/
 ├── Source/
 │   ├── SyCore/
 │   │   ├── Private/
+│   │   │   ├── Entity/      (实体系统: SyEntityComponent, Identity)
 │   │   │   ├── Foundation/  (基础工具)
-│   │   │   ├── Identity/    (ID和引用管理 - SyIdentityComponent 实现)
-│   │   │   ├── Messaging/   (消息与事件系统 - SyMessagingComponent, MessageBus 实现)
+│   │   │   ├── Messaging/   (消息与事件系统)
+│   │   │   ├── State/       (状态系统: StateManager, Operations, Components)
 │   │   │   └── SyCore.cpp
 │   │   └── Public/
 │   │       ├── SyCore.h
+│   │       ├── Entity/
 │   │       ├── Foundation/
-│   │       │   └── Utilities/
-│   │       ├── Identity/
-│   │       │   └── (Public Headers: FSyIdentifier, Interfaces)
-│   │       └── Messaging/
-│   │           └── (Public Headers: FSyMessage, Interfaces)
+│   │       ├── Messaging/
+│   │       └── State/
+│   ├── SyCoreEditor/        (Editor模块)
+│   │   ├── Private/
+│   │   └── Public/
 │   └── SyCore.Build.cs
 ├── SyCore.uplugin
 └── README.md
@@ -53,17 +68,17 @@ SyCore/
 
 ## 使用指南 (Usage Guide)
 
-### Identity 身份标识模块
+### Entity 实体模块
+*   **初始化:** 为 Actor 添加 `USyEntityComponent`。该组件会自动处理依赖组件（如 Identity, State, Message）的创建和初始化顺序。
+*   **使用:** 通过 `SyEntityComponent` 访问其他功能组件。
 
-*   **初始化:** 由于 ActorComponent 限制，`SyIdentityComponent` 通常需要在 Actor 的 Construction Script 或 `BeginPlay` 中显式调用初始化逻辑（例如，通过宿主 Actor 或 `SyEntityComponent` 触发），以生成或分配 UUID。
-*   **依赖:** 消息系统等依赖于 Identity 组件的有效初始化。
-*   **配置:** 可在 Actor 模板或实例上配置代表实体类型的 Gameplay Tag。
+### State 状态模块
+*   **操作记录:** 使用 `USyStateManagerSubsystem` 记录 `FSyOperation` 以修改实体状态。
+*   **状态监听:** `USyStateComponent` 会自动响应相关的状态变更。
 
 ### MessageBus 消息总线
-
-*   **初始化:** 依赖于 `SyIdentityComponent` 和消息组件的初始化。
-*   **发送:** 通过消息组件接口发送结构化的 `FSyMessage`。
-*   **监听:** 其他系统（如 `SyFlow`, `SyQuest`）通过 MessageBus 订阅感兴趣的来源 Tag 或消息 Tag。
+*   **发送:** 通过 `SyMessageComponent` 发送结构化消息。
+*   **监听:** 订阅特定Tag的消息以进行解耦通信。
 
 ## 依赖关系 (Dependencies)
 

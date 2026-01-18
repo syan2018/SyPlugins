@@ -30,64 +30,44 @@ The system briefly implements the following logic chain:
 ## Plugin Hierarchy
 
 1. **SyCore**
-   - The infrastructure module of the system
-   - Provides a unique identifier system for entities (Identifier)
-   - Implements a message bus for inter-module communication (MessageBus)
-   - Defines core data structures
-   - Serves as the base dependency for all other SyPlugins modules
+   - The core infrastructure module of the system.
+   - **Entity System**: Generic entity framework, component-based entity management via `SyEntityComponent` (merged from former SyEntity module).
+   - **State System**: Unified state management system (merged from former SyStateCore, SyOperation, SyStateManager modules).
+     - Defines state data structures and operations.
+     - Provides the `SyStateManagerSubsystem` for state recording and distribution.
+   - **Message Bus**: Implements inter-module communication.
+   - **Foundation**: Basic utilities and interfaces.
 
-2. **SyStateSystem** (Unified State Management System, integrating former SyStateCore, SyOperation, SyStateManager)
-   - **Core Subsystem**: Core data definitions for the state system
-     - Defines entity state data structures (FSyStateCategories)
-     - Provides editor configuration support for states (FSyStateParameterSet)
-     - Defines various state metadata classes (extending UO_TagMetadata)
-     - Supports layered state management (FSyLayeredStateContainer)
-   - **Operations Subsystem**: State operation definitions
-     - Defines state change operation data structures (FSyOperation)
-     - Provides parameter Schema system
-     - Implements common parameter structures
-     - Supports editor configuration and validation
-   - **Manager Subsystem**: State management center
-     - Provides state change recording and distribution mechanisms
-     - Implements the authoritative source for state synchronization
-     - Manages state modification records (FSyStateModificationRecord)
-     - Provides state querying and event notification
-     - Smart subscription and performance optimization
+2. **SyGameplay**
+   - Basic Gameplay framework module.
+   - Builds on top of `SyCore` for specific game interaction systems.
+   - Provides entity interaction, player interaction management, spawn systems, etc.
+   - Implements triggers and high-level gameplay functionalities.
 
-3. **SyEntity**
-   - Generic entity framework module
-   - Provides component-based entity management framework
-   - Implements entity state management (via SyStateComponent)
-   - Supports non-intrusive Actor extension
-   - Provides entity registration and querying functions
+3. **SyFlowImpl**
+   - Flow plugin implementation module.
+   - Provides graphical nodes for SyPlugins functionalities.
+   - Integrates SyCore message and state systems with Flow graph.
+   - Makes gameplay logic easier to compose visually.
 
-4. **SyFlowImpl**
-   - Flow plugin implementation module
-   - Provides graphical nodes for SyPlugins functionalities
-   - Implements Flow node integration for the message system
-   - Provides state operation nodes
-   - Provides interaction system nodes
-   - Makes SyPlugins functionalities easier to compose and use
+4. **SyQuest** (Planned)
+   - Quest system implementation (iterating on current FlowExtension implementation).
+   - Achieves unified quest updates based on states, triggers, and listeners.
+   - Provides quest logic and state management.
 
-5. **SyGameplay**
-   - Basic Gameplay framework module
-   - Builds on top of SyEntity for specific game interaction systems
-   - Provides entity interaction and other high-level functionalities
-   - Currently implements triggers, generic interactions, spawn system, etc.
+5. **SyCombat** (Planned)
+   - ARPG Combat Pipeline Module (SCPA Architecture).
+   - Implements generic combat numerical processing based on the SyCore Processing layer.
+   - Provides core combat mechanisms like Input Buffering, Skill Detection, and Resolution Chains.
+   - Aims to build a standardized, plug-and-play combat operating system.
 
-6. **SyQuest** (Planned)
-   - Quest system implementation (iterating on current FlowExtension implementation)
-   - Achieves unified quest updates based on states, triggers, and listeners
-   - Provides quest logic and state management
-   - Includes importing and refactoring the TagFacts system
+6. **SyPluginsImpl**
+   - Plugin implementation example module.
+   - Consolidates structures like GameplayTag used in examples.
+   - Provides references for specific function implementations.
+   - Demonstrates integration methods between modules.
 
-7. **SyPluginsImpl**
-   - Plugin implementation example module
-   - Consolidates structures like GameplayTag used in examples
-   - Provides references for specific function implementations
-   - Demonstrates integration methods between modules
-
-Detailed introductions for each module can be found in their respective README.md files. Please forgive if the project structure seems overly granular.
+Detailed introductions for each module can be found in their respective README.md files.
 
 ## Usage Reference
 

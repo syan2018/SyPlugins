@@ -36,64 +36,44 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
 [Tutorials](Docs/Tutorials.md)
 
 ## 插件层级
+
 1. **SyCore**
-   - 系统的基础设施模块
-   - 提供实体唯一标识（Identifier）系统
-   - 实现模块间通信的消息总线（MessageBus）
-   - 定义部分核心数据结构
-   - 作为所有其他SyPlugins模块的基础依赖
+   - 系统的核心基础设施模块
+   - **实体系统 (Entity System)**：整合了原 SyEntity 模块，提供基于组件的实体管理框架。
+   - **状态系统 (State System)**：整合了原 SyStateCore, SyOperation, SyStateManager 模块，提供统一的状态管理、操作记录和分发机制。
+   - **消息总线 (Message Bus)**：实现模块间解耦通信。
+   - **基础服务 (Foundation)**：提供标识符、错误处理等底层工具。
 
-2. **SyStateSystem**（统一状态管理系统，整合了原 SyStateCore、SyOperation、SyStateManager）
-   - **Core 子系统**: 状态系统的核心数据定义
-     - 定义实体状态的数据结构（FSyStateCategories）
-     - 提供状态编辑器配置支持（FSyStateParameterSet）
-     - 定义各种状态元数据类（拓展UO_TagMetadata）
-     - 支持分层状态管理（FSyLayeredStateContainer）
-   - **Operations 子系统**: 状态操作定义
-     - 定义状态变更操作的数据结构（FSyOperation）
-     - 提供参数Schema系统
-     - 实现常用参数结构体
-     - 支持编辑器配置和验证
-   - **Manager 子系统**: 状态管理中心
-     - 提供状态变更记录和分发机制
-     - 实现状态同步的权威来源
-     - 管理状态变更记录（FSyStateModificationRecord）
-     - 提供状态查询和事件通知
-     - 智能订阅和性能优化
+2. **SyGameplay**
+   - 基础 Gameplay 玩法框架
+   - 构建在 SyCore 之上的具体游戏交互系统
+   - 提供实体交互、玩家交互管理、生成系统等高层功能
+   - 实现触发器和通用Gameplay逻辑
 
-3. **SyEntity**
-   - 通用实体框架模块
-   - 提供基于组件的实体管理框架
-   - 实现实体状态管理（通过SyStateComponent）
-   - 支持非侵入式的Actor扩展
-   - 提供实体注册和查询功能
+3. **SyFlowImpl**
+   - Flow 插件实现模块
+   - 提供 SyPlugins 功能的图形化节点
+   - 集成消息和状态系统到 Flow Graph
+   - 使 Gameplay 逻辑更易于可视化编排
 
-4. **SyFlowImpl**
-   - Flow插件实现模块
-   - 提供SyPlugins功能的图形化节点
-   - 实现消息系统的Flow节点集成
-   - 支持实体控制的Flow节点（计划中）
-   - 使SyPlugins功能更易于组合和使用
-
-5. **SyGameplay**
-   - 基础Gameplay玩法框架
-   - 构建在SyEntity之上的具体游戏交互系统
-   - 提供实体交互等高层功能
-   - 当前简单实现触发器、通用交互等
-
-6. **SyQuest**（计划中）
-   - 任务系统实现（迭代当前FlowExtension实现）
+4. **SyQuest**（计划中）
+   - 任务系统实现（迭代当前 FlowExtension 实现）
    - 基于状态、触发和监听实现统一任务更新
    - 提供任务逻辑和状态管理
-   - 包括对TagFacts系统的导入和重构
 
-7. **SyPluginsImpl**
+5. **SyCombat** (计划中)
+   - ARPG 战斗管线模块 (SCPA 架构)
+   - 基于 SyCore Processing 层实现通用的战斗数值处理
+   - 提供输入缓冲、技能判定、结算链等核心战斗机制
+   - 目标是建立一套即插即用的标准化战斗操作系统
+
+6. **SyPluginsImpl**
    - 插件实现示例模块
-   - 对示例使用的GameplayTag结构等进行汇总
+   - 对示例使用的 GameplayTag 结构等进行汇总
    - 提供具体功能实现参考
    - 展示模块间的集成方式
 
-各模块详细介绍详见模块下 README.md 项目结构可能存在拆的太细之嫌，还请见谅
+各模块详细介绍详见模块下 README.md
 
 ## 项目由来
 
