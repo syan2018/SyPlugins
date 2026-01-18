@@ -40,17 +40,22 @@ SyCore 是 SyPlugins 框架的最基础模块，定义了全局共享的 Gamepla
     *   `FSyStateCategories`: 状态集合。
     *   `FSyStateParams`: 具体的状态参数。
 
-#### 3.1 ✅ 新增：统一状态入口（StateFacade）
-为避免后续系统（SyCombat/任务/AI/交互）直接依赖“某个具体后端”（Generic State / GAS / 自研数值），SyCore 引入 **门面组件** 作为唯一入口：
+#### 3.1 ✅ 新增：统一状态入口（StateComponent）
+为避免后续系统（SyCombat/任务/AI/交互）直接依赖“某个具体后端”（Generic State / GAS / 自研数值），SyCore 将 **`USyStateComponent` 作为唯一入口**：
 
-- **`USyEntityStateFacadeComponent`**
-  - **唯一入口**：上层系统只通过 Facade 进行 Query/Apply
-  - **可插拔后端**：通过 `USyStateBackendBaseComponent` 组件扩展（例如 GAS 后端作为 SyCombat 插件内的 `SyGASBridge` 模块提供）
-  - **无隐式回退**：Facade 不再自动回落到旧系统，必须显式挂载后端组件
+- **`USyStateComponent`**
+  - **唯一入口**：上层系统只通过 StateComponent 进行 Query/Apply
+  - **可插拔后端**：通过 `USyStateBackendBase` 子对象扩展（例如 GAS 后端作为 SyCombat 插件内的 `SyGASBridge` 模块提供）
+  - **标准化配置**：推荐使用 `USyStateProfile`（统一 DefaultInitData + BackendTypes/BackendInstances）
+  - **无隐式回退**：必须显式添加后端对象或 Profile
 
 推荐搭配：
-- **通用旧状态后端**：`USyGenericStateBackendComponent`
-- **GAS 后端**：`USyGASStateBackendComponent`（SyCombat 内 `SyGASBridge` 模块）
+- **通用旧状态后端**：`USyGenericStateBackend`
+- **GAS 后端**：`USyGASStateBackend`（SyCombat 内 `SyGASBridge` 模块）
+
+推荐流程：
+1. 创建 `USyStateProfile` 资产（DefaultInitData + BackendTypes/BackendInstances）
+2. 在 `USyStateComponent.StateProfile` 指定该资产
 
 > 推荐实践：任务系统设置敌人“转阶段/死亡”等关键状态，应以 `EntityScope + Persistent` 形式写入，由 GAS Bridge 映射为 GameplayEffect/GrantedTags，从而影响 Ability 可用性与分支。
 

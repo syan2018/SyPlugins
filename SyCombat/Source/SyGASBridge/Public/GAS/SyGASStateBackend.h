@@ -2,39 +2,37 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
-#include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
 
-#include "State/Backends/SyStateBackendBaseComponent.h"
+#include "State/Backends/SyStateBackendBase.h"
 
-#include "SyGASStateBackendComponent.generated.h"
+#include "SyGASStateBackend.generated.h"
 
 class UAbilitySystemComponent;
 class USyStateToGASMapping;
 class UGameplayEffect;
 
 /**
- * USyGASStateBackendComponent
+ * USyGASStateBackend
  *
- * 将 SyCore 的 StateFacade 写入请求映射到 GAS（ASC）上：
+ * 将 SyCore 的 StateComponent 写入请求映射到 GAS（ASC）上：
  * - Temporary: 默认用 LooseGameplayTags（可预测、即时）
  * - Persistent: 默认用 GameplayEffect（GrantedTags，复制/回滚友好）
  *
  * 注意：
- * - 这是“后端组件”，由 `USyEntityStateFacadeComponent` 自动发现并按优先级调用
+ * - 这是“后端对象”，由 `USyStateComponent` 持有并按优先级调用
  * - 为了最大化兼容，既支持 loose tag 也支持 effect 方式（由 Mapping 控制）
  */
-UCLASS(Blueprintable, ClassGroup=(SyEntity), meta=(BlueprintSpawnableComponent))
-class SYGASBRIDGE_API USyGASStateBackendComponent : public USyStateBackendBaseComponent
+UCLASS(Blueprintable, EditInlineNew, DefaultToInstanced)
+class SYGASBRIDGE_API USyGASStateBackend : public USyStateBackendBase
 {
 	GENERATED_BODY()
 
 public:
-	USyGASStateBackendComponent();
+	USyGASStateBackend();
+	virtual void InitializeBackend(USyStateComponent* InOwner) override;
 
-	virtual void OnSyComponentInitialized() override;
-
-	// USyStateBackendBaseComponent
+	// USyStateBackendBase
 	virtual int32 GetBackendPriority_Implementation() const override { return 1000; }
 	virtual bool CanHandleChange_Implementation(const FSyStateChangeRequest& Request) const override;
 	virtual bool ApplyChange_Implementation(const FSyStateChangeRequest& Request) override;

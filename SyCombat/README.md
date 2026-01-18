@@ -4,14 +4,13 @@
 `SyCombat` 是 **“流程编排为核心”** 的战斗管线插件：负责把输入/技能/判定/结算/表现等信息流收口到统一管线内。
 
 - **不直接依赖 GAS**：所有重度逻辑与具体实现（Lyra/GAS/自研战斗）都应放在 Adapter/Impl 中。
-- **与 SyCore 的关系**：坚持 `USyEntityComponent` 为统一入口；状态写入建议走 `USyEntityStateFacadeComponent`（唯一入口）。
+- **与 SyCore 的关系**：坚持 `USyEntityComponent` 为统一入口；状态写入走 `USyStateComponent`（唯一入口）。
 
 ## 当前内容（原型骨架）
-- `USyCombatEntityComponent`：战斗实体 facet（基于 `USyEntityComponent` 获取 EntityId）
-- `USyCombatPipelineComponent`：管线中枢骨架（事件：`RequestAction` / `ReportHit`）
+- `USyCombatComponent`：收敛版核心组件（Pipeline + InputBuffer + ResolutionChain）
 
 ## GAS Bridge（官方组件）
-SyCombat 插件内置 **GAS Bridge 模块**（`SyGASBridge`），用于把 SyCore StateFacade 的写入映射到 ASC：
+SyCombat 插件内置 **GAS Bridge 模块**（`SyGASBridge`），用于把 SyCore StateComponent 的写入映射到 ASC：
 - Persistent：GameplayEffect / GrantedTags（复制/回滚友好）
 - Temporary：LooseGameplayTags（即时/可预测）
 

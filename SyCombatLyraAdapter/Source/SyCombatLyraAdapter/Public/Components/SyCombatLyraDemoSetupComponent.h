@@ -5,8 +5,7 @@
 #include "GameplayTagContainer.h"
 #include "SyCombatLyraDemoSetupComponent.generated.h"
 
-class USyCombatPipelineComponent;
-class USyCombatResolutionChainComponent;
+class USyCombatComponent;
 class USyCombatGASAbilityDriverComponent;
 
 /**
@@ -34,7 +33,7 @@ public:
 	TMap<FGameplayTag, FGameplayTag> DefaultActionToEvent;
 
 private:
-	void RegisterDefaultProcessors(USyCombatResolutionChainComponent* Chain) const;
+	void RegisterDefaultProcessors(USyCombatComponent* Combat) const;
 	void ApplyDefaultActionMapping(USyCombatGASAbilityDriverComponent* Driver) const;
 };
 

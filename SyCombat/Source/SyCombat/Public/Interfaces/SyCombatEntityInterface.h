@@ -15,7 +15,7 @@ class SYCOMBAT_API USyCombatEntityInterface : public UInterface
  * ISyCombatEntityInterface
  *
  * 轻量“战斗实体”抽象，不依赖 GAS。
- * 实际实现通常由 `USyCombatEntityComponent` 提供。
+ * 实际实现通常由 `USyCombatComponent` 提供。
  */
 class SYCOMBAT_API ISyCombatEntityInterface
 {

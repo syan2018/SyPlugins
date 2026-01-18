@@ -4,14 +4,14 @@
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
 #include "Entity/SyEntityComponent.h"
-#include "State/StateModificationRecord.h" // 包含 FSyStateModificationRecord
 #include "Foundation/ISyComponentInterface.h"
+#include "State/SyStateTypes.h"
+#include "State/Backends/SyStateBackendBase.h"
+#include "State/SyStateProfile.h"
 #include "Types/StateContainerTypes.h"
 #include "SyStateComponent.generated.h"
 
-// 前向声明
-class USyStateManagerSubsystem;
-struct FSyStateParameterSet; 
+struct FSyStateParameterSet;
 
 /**
  * SyStateComponent - 实体状态组件
@@ -19,9 +19,8 @@ struct FSyStateParameterSet;
  * 1. 使用 FSyStateParameterSet 进行初始化。
  * 2. 维护实体的本地运行时状态 (FSyStateCategories)。
  * 3. 提供状态查询接口 (通过 FSyStateCategories)。
- * 4. 连接到全局 USyStateManagerSubsystem，监听状态修改记录。
- * 5. 应用与其相关的状态修改记录到本地状态。
- * 6. 触发本地状态数据变更事件 (TODO)。
+ * 4. 通过后端对象处理读写（Generic/GAS/自研数值等）。
+ * 5. 触发本地状态数据变更事件 (TODO)。
  */
 UCLASS(ClassGroup=(SyEntity), meta=(BlueprintSpawnableComponent))
 class SYCORE_API USyStateComponent : public UActorComponent, public ISyComponentInterface
@@ -42,6 +41,18 @@ public:
     
     // 由 EntityComponent 调用，广播初始状态
     virtual void OnSyComponentInitialized() override;
+
+    /**
+     * @brief 统一入口：应用状态变更（由后端处理）
+     */
+    UFUNCTION(BlueprintCallable, Category="SyState")
+    bool ApplyStateChange(const FSyStateChangeRequest& Request);
+
+    /**
+     * @brief 统一入口：优先由后端读取状态值
+     */
+    UFUNCTION(BlueprintCallable, Category="SyState")
+    bool TryGetStateValueStruct(FGameplayTag StateTag, FInstancedStruct& OutValue) const;
 
     // --- 状态访问 ---
     /**
@@ -68,8 +79,8 @@ public:
     const FSyLayeredStateContainer& GetLayeredStateContainer() const { return LayeredState; }
 
     /**
-     * @brief 获取指定标签最终生效的第一个元数据参数。
-     * 优先从全局状态查找，如果找不到则从本地状态查找。
+     * @brief 获取本地分层状态中指定标签最终生效的第一个元数据参数。
+     * @note 如需“统一入口”的读取，请使用 TryGetStateValueStruct（会走后端）
      * @param StateTag 要查找的状态标签。
      * @param OutParam 如果找到，将填充参数；否则保持不变。
      * @return 如果找到参数则返回 true。
@@ -89,7 +100,14 @@ public:
 
     // --- 配置 ---
     /**
-     * @brief 实体状态的初始化数据。
+     * @brief 标准化配置（推荐）。
+     *        通过 Profile 统一初始化数据与后端类型。
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyState|Config")
+    TObjectPtr<USyStateProfile> StateProfile;
+
+    /**
+     * @brief 实体状态的初始化数据（可覆盖 Profile 的默认值）。
      *        可以在蓝图编辑器中直接配置，或者在 Actor 构造时动态设置。
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyState|Config", meta=(DisplayName="Default Initialization Data"))
@@ -127,10 +145,17 @@ public:
     FGameplayTag GetTargetTypeTag() const;
 
     /**
-     * @brief 是否启用与全局 StateManager 的同步
+     * @brief 后端类型列表（类型化流程，推荐）
      */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyState|Config", meta=(DisplayName="Enable Global Sync"))
-    bool bEnableGlobalSync = true;
+    UPROPERTY(EditAnywhere, Category="SyState|Backend")
+    TArray<TSubclassOf<USyStateBackendBase>> BackendTypes;
+
+    /**
+     * @brief 状态后端实例（可手工配置）
+     * @note 若此列表非空，将优先使用实例并跳过 BackendTypes/Profile 的自动创建
+     */
+    UPROPERTY(EditAnywhere, Instanced, Category="SyState|Backend")
+    TArray<TObjectPtr<USyStateBackendBase>> Backends;
 
     // TODO: [拓展] 本地状态变更事件 
     /** 当本地状态数据实际发生变化时广播。
@@ -149,7 +174,7 @@ protected:
 
     /** 分层状态容器 - 使用层级系统管理状态
      *  - Default 层：初始化数据
-     *  - Persistent 层：从 StateManager 同步的全局状态
+     *  - Persistent 层：由后端写入的持久状态
      *  - Temporary 层：临时修改（Buff等）
      *  - Override 层：强制覆盖
      */
@@ -157,10 +182,6 @@ protected:
     FSyLayeredStateContainer LayeredState;
 
 private:
-    /** 缓存 StateManager 子系统指针 */
-    UPROPERTY(Transient)
-    TObjectPtr<USyStateManagerSubsystem> StateManagerSubsystem;
-
     /** 缓存关联的EntityComponent指针 */
     UPROPERTY(Transient)
     TObjectPtr<USyEntityComponent> EntityComponent;
@@ -168,28 +189,13 @@ private:
     /** 标记状态组件是否已完全初始化（包括默认数据和全局同步） */
     bool bIsFullyInitialized = false;
 
-    /**
-     * @brief 处理从 StateManager 接收到的新状态修改记录。
-     * @param NewRecord 新记录。
-     */
-    UFUNCTION()
-    void HandleStateModificationChanged(const FSyStateModificationRecord& ChangedRecord);
+    bool bBackendsInitialized = false;
 
-    /**
-     * @brief 尝试连接到 StateManager 并订阅事件。
-     */
-    void TryConnectToStateManager();
-
-    /**
-     * @brief 从 StateManager 断开连接并取消订阅。
-     */
-    void DisconnectFromStateManager();
-
-    /**
-     * @brief 应用聚合后的状态修改到本地状态。
-     *        内部会调用 FSyStateCategories 的 ApplyStateModifications 方法。
-     */
-    void ApplyAggregatedModifications();
+    void InitializeBackends();
+    void BuildBackendInstances();
+    void SortBackends();
+    bool ApplyViaBackends(const FSyStateChangeRequest& LocalRequest);
+    bool TryGetViaBackends(const FGameplayTag& StateTag, FInstancedStruct& OutValue) const;
 
     /**
      * @brief 查找并缓存关联的EntityComponent

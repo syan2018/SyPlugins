@@ -17,15 +17,15 @@ USyCombatGASAbilityDriverComponent::USyCombatGASAbilityDriverComponent()
 
 void USyCombatGASAbilityDriverComponent::OnSyComponentInitialized()
 {
-	Pipeline = GetOwner() ? GetOwner()->FindComponentByClass<USyCombatPipelineComponent>() : nullptr;
-	if (!Pipeline)
+	Combat = GetOwner() ? GetOwner()->FindComponentByClass<USyCombatComponent>() : nullptr;
+	if (!Combat)
 	{
-		UE_LOG(LogSyCombatGASDriver, Warning, TEXT("Missing USyCombatPipelineComponent on owner %s."), *GetNameSafe(GetOwner()));
+		UE_LOG(LogSyCombatGASDriver, Warning, TEXT("Missing USyCombatComponent on owner %s."), *GetNameSafe(GetOwner()));
 		return;
 	}
 
 	// 绑定 SyCombat 的 Action 入口
-	Pipeline->OnActionRequested.AddDynamic(this, &USyCombatGASAbilityDriverComponent::HandleActionRequested);
+	Combat->OnActionRequested.AddDynamic(this, &USyCombatGASAbilityDriverComponent::HandleActionRequested);
 }
 
 UAbilitySystemComponent* USyCombatGASAbilityDriverComponent::ResolveASC() const

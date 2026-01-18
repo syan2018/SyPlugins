@@ -1,6 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "State/Backends/SyGenericStateBackendComponent.h"
+#include "State/Backends/SyGenericStateBackend.h"
 
 #include "State/SyStateComponent.h"
 #include "State/SyStateManagerSubsystem.h"
@@ -12,16 +12,11 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogSyGenericStateBackend, Log, All);
 
-USyGenericStateBackendComponent::USyGenericStateBackendComponent()
+void USyGenericStateBackend::InitializeBackend(USyStateComponent* InOwner)
 {
-	PrimaryComponentTick.bCanEverTick = false;
-}
+	Super::InitializeBackend(InOwner);
 
-void USyGenericStateBackendComponent::OnSyComponentInitialized()
-{
-	StateComponent = GetOwner() ? GetOwner()->FindComponentByClass<USyStateComponent>() : nullptr;
-
-	if (UWorld* World = GetWorld())
+	if (UWorld* World = InOwner ? InOwner->GetWorld() : nullptr)
 	{
 		if (UGameInstance* GameInstance = World->GetGameInstance())
 		{
@@ -30,11 +25,11 @@ void USyGenericStateBackendComponent::OnSyComponentInitialized()
 	}
 }
 
-bool USyGenericStateBackendComponent::CanHandleChange_Implementation(const FSyStateChangeRequest& Request) const
+bool USyGenericStateBackend::CanHandleChange_Implementation(const FSyStateChangeRequest& Request) const
 {
 	if (Request.Layer == ESyStateWriteLayer::Temporary && Request.Scope == ESyStateScope::Entity)
 	{
-		return StateComponent != nullptr;
+		return OwnerStateComponent != nullptr;
 	}
 
 	if (Request.Layer == ESyStateWriteLayer::Persistent &&
@@ -46,7 +41,7 @@ bool USyGenericStateBackendComponent::CanHandleChange_Implementation(const FSySt
 	return false;
 }
 
-bool USyGenericStateBackendComponent::ApplyChange_Implementation(const FSyStateChangeRequest& Request)
+bool USyGenericStateBackend::ApplyChange_Implementation(const FSyStateChangeRequest& Request)
 {
 	if (!Request.StateTag.IsValid() || !Request.Value.IsValid())
 	{
@@ -56,14 +51,14 @@ bool USyGenericStateBackendComponent::ApplyChange_Implementation(const FSyStateC
 	// 1) Entity + Temporary -> StateComponent 临时层
 	if (Request.Layer == ESyStateWriteLayer::Temporary && Request.Scope == ESyStateScope::Entity)
 	{
-		if (!StateComponent)
+		if (!OwnerStateComponent)
 		{
 			return false;
 		}
 
 		FSyStateParameterSet Temp;
 		Temp.AddStateParam(Request.StateTag, Request.Value);
-		StateComponent->ApplyTemporaryModifications(Temp);
+		OwnerStateComponent->ApplyTemporaryModifications(Temp);
 		return true;
 	}
 
@@ -94,13 +89,13 @@ bool USyGenericStateBackendComponent::ApplyChange_Implementation(const FSyStateC
 	return false;
 }
 
-bool USyGenericStateBackendComponent::TryGetValueStruct_Implementation(const FGameplayTag& StateTag, FInstancedStruct& OutValue) const
+bool USyGenericStateBackend::TryGetValueStruct_Implementation(const FGameplayTag& StateTag, FInstancedStruct& OutValue) const
 {
-	if (!StateComponent)
+	if (!OwnerStateComponent)
 	{
 		return false;
 	}
 
-	return StateComponent->GetEffectiveStateParam(StateTag, OutValue);
+	return OwnerStateComponent->GetEffectiveStateParam(StateTag, OutValue);
 }
 

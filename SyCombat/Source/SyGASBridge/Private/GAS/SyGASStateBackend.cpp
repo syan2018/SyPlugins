@@ -1,43 +1,46 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GAS/SyGASStateBackendComponent.h"
+#include "GAS/SyGASStateBackend.h"
 
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 
 #include "GAS/SyStateToGASMapping.h"
+#include "State/SyStateComponent.h"
 
 #include "State/Types/Metadatas/BasicMetadataValueTypes.h" // FSyBoolValue
 
 DEFINE_LOG_CATEGORY_STATIC(LogSyGASBridge, Log, All);
 
-USyGASStateBackendComponent::USyGASStateBackendComponent()
+USyGASStateBackend::USyGASStateBackend()
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void USyGASStateBackendComponent::OnSyComponentInitialized()
+void USyGASStateBackend::InitializeBackend(USyStateComponent* InOwner)
 {
+	Super::InitializeBackend(InOwner);
 	EnsureASC();
 }
 
-bool USyGASStateBackendComponent::EnsureASC()
+bool USyGASStateBackend::EnsureASC()
 {
 	if (ASC)
 	{
 		return true;
 	}
 
-	if (!GetOwner())
+	if (!OwnerStateComponent || !OwnerStateComponent->GetOwner())
 	{
 		return false;
 	}
 
+	AActor* OwnerActor = OwnerStateComponent->GetOwner();
+
 	// 1) 优先使用 AbilitySystemInterface（Lyra 风格）
-	if (GetOwner()->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
+	if (OwnerActor->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
 	{
-		IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(GetOwner());
+		IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(OwnerActor);
 		if (ASI)
 		{
 			ASC = ASI->GetAbilitySystemComponent();
@@ -47,19 +50,19 @@ bool USyGASStateBackendComponent::EnsureASC()
 	// 2) 回退：直接找组件
 	if (!ASC)
 	{
-		ASC = GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
+		ASC = OwnerActor->FindComponentByClass<UAbilitySystemComponent>();
 	}
 
 	if (!ASC)
 	{
-		UE_LOG(LogSyGASBridge, Verbose, TEXT("No ASC found on owner %s."), *GetNameSafe(GetOwner()));
+		UE_LOG(LogSyGASBridge, Verbose, TEXT("No ASC found on owner %s."), *GetNameSafe(OwnerActor));
 		return false;
 	}
 
 	return true;
 }
 
-const FSyStateToGASTagMapping* USyGASStateBackendComponent::FindTagMapping(const FGameplayTag& SyStateTag) const
+const FSyStateToGASTagMapping* USyGASStateBackend::FindTagMapping(const FGameplayTag& SyStateTag) const
 {
 	if (!Mapping || !SyStateTag.IsValid())
 	{
@@ -77,7 +80,7 @@ const FSyStateToGASTagMapping* USyGASStateBackendComponent::FindTagMapping(const
 	return nullptr;
 }
 
-bool USyGASStateBackendComponent::ExtractBoolValue(const FInstancedStruct& Value, bool& OutBool) const
+bool USyGASStateBackend::ExtractBoolValue(const FInstancedStruct& Value, bool& OutBool) const
 {
 	// 约定：如果 Value 缺失/无效，则视为“启用”
 	if (!Value.IsValid())
@@ -100,7 +103,7 @@ bool USyGASStateBackendComponent::ExtractBoolValue(const FInstancedStruct& Value
 	return false;
 }
 
-bool USyGASStateBackendComponent::CanHandleChange_Implementation(const FSyStateChangeRequest& Request) const
+bool USyGASStateBackend::CanHandleChange_Implementation(const FSyStateChangeRequest& Request) const
 {
 	if (Request.Scope != ESyStateScope::Entity)
 	{
@@ -116,7 +119,7 @@ bool USyGASStateBackendComponent::CanHandleChange_Implementation(const FSyStateC
 	return FindTagMapping(Request.StateTag) != nullptr;
 }
 
-bool USyGASStateBackendComponent::ApplyChange_Implementation(const FSyStateChangeRequest& Request)
+bool USyGASStateBackend::ApplyChange_Implementation(const FSyStateChangeRequest& Request)
 {
 	if (!EnsureASC())
 	{
@@ -165,7 +168,7 @@ bool USyGASStateBackendComponent::ApplyChange_Implementation(const FSyStateChang
 	return false;
 }
 
-bool USyGASStateBackendComponent::ApplyTagAsLoose(const FGameplayTag& TagToApply, bool bEnable)
+bool USyGASStateBackend::ApplyTagAsLoose(const FGameplayTag& TagToApply, bool bEnable)
 {
 	if (!TagToApply.IsValid() || !ASC)
 	{
@@ -184,7 +187,7 @@ bool USyGASStateBackendComponent::ApplyTagAsLoose(const FGameplayTag& TagToApply
 	return true;
 }
 
-bool USyGASStateBackendComponent::ApplyTagAsEffect(const TSubclassOf<UGameplayEffect>& EffectClass, const FGameplayTag& SyStateTag, bool bEnable)
+bool USyGASStateBackend::ApplyTagAsEffect(const TSubclassOf<UGameplayEffect>& EffectClass, const FGameplayTag& SyStateTag, bool bEnable)
 {
 	if (!EffectClass || !ASC || !SyStateTag.IsValid())
 	{

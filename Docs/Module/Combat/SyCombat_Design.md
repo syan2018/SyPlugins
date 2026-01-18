@@ -138,8 +138,8 @@ graph TB
     *   `GetTargetingPoint(GameplayTag BoneTag)`: 获取多部位判定点。
 *   **Case**: 角色拥有多个状态集（Health, Poise, Elemental）。技能不直接 Cast 角色，而是通过接口请求操作。
 
-### 3.2 管线中枢 (SyCombatPipelineComponent)
-**目标**: 收口所有流程，管理生命周期。
+### 3.2 管线中枢 (SyCombatComponent)
+**目标**: 收口所有流程，管理生命周期（Pipeline + InputBuffer + ResolutionChain）。
 
 *   **职责**:
     1.  接收 `RequestAction` (来自 InputBuffer 或 AI)。
@@ -219,7 +219,7 @@ graph TB
 ### 4.1 Phase 1: 基础设施 (2周)
 建立接口层，切断直接依赖。
 *   [ ] 定义 `ICombatEntityInterface`，让 `LyraCharacter` 实现它。
-*   [ ] 实现 `SyCombatPipelineComponent`，挂载到 Character。
+*   [ ] 实现 `SyCombatComponent`（Pipeline + InputBuffer + ResolutionChain），挂载到 Character。
 *   [ ] 定义 `FSyCombatOperation` 和 `CombatSource` 结构体。
 
 ### 4.2 Phase 2: 意图与行动 (3周)

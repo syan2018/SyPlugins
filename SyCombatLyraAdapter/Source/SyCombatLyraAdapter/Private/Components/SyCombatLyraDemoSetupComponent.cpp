@@ -2,8 +2,7 @@
 
 #include "Components/SyCombatLyraDemoSetupComponent.h"
 
-#include "Components/SyCombatPipelineComponent.h"
-#include "Components/SyCombatResolutionChainComponent.h"
+#include "Components/SyCombatComponent.h"
 #include "Components/SyCombatGASAbilityDriverComponent.h"
 #include "Processors/SyLyraApplySpecProcessor.h"
 #include "Processors/SyLyraBuildSpecProcessor.h"
@@ -22,33 +21,32 @@ void USyCombatLyraDemoSetupComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	USyCombatPipelineComponent* Pipeline = GetOwner() ? GetOwner()->FindComponentByClass<USyCombatPipelineComponent>() : nullptr;
-	USyCombatResolutionChainComponent* Chain = GetOwner() ? GetOwner()->FindComponentByClass<USyCombatResolutionChainComponent>() : nullptr;
+	USyCombatComponent* Combat = GetOwner() ? GetOwner()->FindComponentByClass<USyCombatComponent>() : nullptr;
 	USyCombatGASAbilityDriverComponent* Driver = GetOwner() ? GetOwner()->FindComponentByClass<USyCombatGASAbilityDriverComponent>() : nullptr;
 
-	if (!Pipeline || !Chain || !Driver)
+	if (!Combat || !Driver)
 	{
-		UE_LOG(LogSyCombatLyraDemo, Warning, TEXT("DemoSetup missing components on %s (Pipeline=%d, Chain=%d, Driver=%d)"),
-			*GetNameSafe(GetOwner()), Pipeline != nullptr, Chain != nullptr, Driver != nullptr);
+		UE_LOG(LogSyCombatLyraDemo, Warning, TEXT("DemoSetup missing components on %s (Combat=%d, Driver=%d)"),
+			*GetNameSafe(GetOwner()), Combat != nullptr, Driver != nullptr);
 		return;
 	}
 
-	RegisterDefaultProcessors(Chain);
+	RegisterDefaultProcessors(Combat);
 	ApplyDefaultActionMapping(Driver);
 
 	UE_LOG(LogSyCombatLyraDemo, Log, TEXT("SyCombat Lyra demo setup complete for %s"), *GetNameSafe(GetOwner()));
 }
 
-void USyCombatLyraDemoSetupComponent::RegisterDefaultProcessors(USyCombatResolutionChainComponent* Chain) const
+void USyCombatLyraDemoSetupComponent::RegisterDefaultProcessors(USyCombatComponent* Combat) const
 {
-	if (!Chain)
+	if (!Combat)
 	{
 		return;
 	}
 
-	Chain->RegisterProcessor(NewObject<USyLyraBuildSpecProcessor>(this));
-	Chain->RegisterProcessor(NewObject<USyLyraApplySpecProcessor>(this));
-	Chain->RegisterProcessor(NewObject<USyLyraDebugTraceProcessor>(this));
+	Combat->RegisterProcessor(NewObject<USyLyraBuildSpecProcessor>(this));
+	Combat->RegisterProcessor(NewObject<USyLyraApplySpecProcessor>(this));
+	Combat->RegisterProcessor(NewObject<USyLyraDebugTraceProcessor>(this));
 }
 
 void USyCombatLyraDemoSetupComponent::ApplyDefaultActionMapping(USyCombatGASAbilityDriverComponent* Driver) const

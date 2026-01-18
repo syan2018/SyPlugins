@@ -5,13 +5,13 @@
 
 ## 当前内容（原型骨架）
 - `USyCombatGASAbilityDriverComponent`
-  - 监听 `USyCombatPipelineComponent::OnActionRequested`
+  - 监听 `USyCombatComponent::OnActionRequested`
   - 按 `ActionToGameplayEventTag` 映射向 Actor 发送 GameplayEvent（建议由 AbilitySet/Ability 监听事件触发）
 
 ## 典型用法
 1. 角色挂载：
    - `USyEntityComponent`
-   - `USyCombatPipelineComponent`（SyCombat）
+   - `USyCombatComponent`（SyCombat）
    - `USyCombatGASAbilityDriverComponent`（本插件）
 2. 配置 `ActionTag -> GameplayEventTag`
 3. 让对应 Ability 在 GAS 侧监听该 GameplayEventTag，并配置 Tag Gate（推荐）

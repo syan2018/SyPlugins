@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "StructUtils/InstancedStruct.h"
-#include "SyStateFacadeTypes.generated.h"
+#include "SyStateTypes.generated.h"
 
 /**
  * ESyStateScope - 状态写入/路由的目标范围
@@ -37,7 +37,7 @@ enum class ESyStateWriteLayer : uint8
  * FSyStateChangeRequest - 统一状态变更请求
  *
  * 设计目标：
- * - 成为 SyPlugins 体系里“唯一入口”的参数载体（通过 USyEntityStateFacadeComponent）
+ * - 成为 SyPlugins 体系里“唯一入口”的参数载体（通过 USyStateComponent）
  * - 允许不同后端（Generic / GAS / 自研Numeric）按 Scope/Layer 路由和实现
  */
 USTRUCT(BlueprintType)
@@ -53,7 +53,7 @@ struct SYCORE_API FSyStateChangeRequest
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="SyState")
 	ESyStateWriteLayer Layer = ESyStateWriteLayer::Temporary;
 
-	/** 目标实体ID（Scope=Entity 时推荐必须有效；Facade 可做转发路由） */
+	/** 目标实体ID（Scope=Entity 时推荐必须有效；StateComponent 可做转发路由） */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="SyState")
 	FGuid TargetEntityId;
 

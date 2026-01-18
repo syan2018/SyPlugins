@@ -5,7 +5,7 @@
 #include "Foundation/ISyComponentInterface.h"
 #include "GameplayTagContainer.h"
 
-#include "Components/SyCombatPipelineComponent.h"
+#include "Components/SyCombatComponent.h"
 #include "Interfaces/SyCombatAbilityDriverInterface.h"
 
 #include "SyCombatGASAbilityDriverComponent.generated.h"
@@ -38,7 +38,7 @@ public:
 
 private:
 	UPROPERTY(Transient)
-	TObjectPtr<USyCombatPipelineComponent> Pipeline;
+	TObjectPtr<USyCombatComponent> Combat;
 
 	UFUNCTION()
 	void HandleActionRequested(const FSyCombatActionRequest& Request);

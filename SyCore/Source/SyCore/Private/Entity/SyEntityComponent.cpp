@@ -4,8 +4,7 @@
 #include "Entity/SyEntityRegistry.h"
 #include "State/SyStateComponent.h"
 #include "State/Operations/OperationTypes.h"
-#include "State/SyEntityStateFacadeComponent.h"
-#include "State/SyStateFacadeTypes.h"
+#include "State/SyStateTypes.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -303,8 +302,8 @@ bool USyEntityComponent::BroadcastEventWithMetadata(const FGameplayTag& EventTyp
 // 持久状态接口（通过 StateManager）
 bool USyEntityComponent::ApplyStateOperation(const FSyOperation& Operation)
 {
-    // 统一入口：如果 Facade 存在，则通过 Facade 路由（避免历史语义直接写入 StateManager）
-    if (USyEntityStateFacadeComponent* Facade = FindSyComponent<USyEntityStateFacadeComponent>())
+    // 统一入口：通过 USyStateComponent 路由（后端决定处理方式）
+    if (USyStateComponent* State = FindSyComponent<USyStateComponent>())
     {
         bool bAny = false;
         bool bAllApplied = true;
@@ -328,7 +327,7 @@ bool USyEntityComponent::ApplyStateOperation(const FSyOperation& Operation)
                 Request.Value = Param;
                 Request.SourceSystemTag = Operation.Source.SourceTypeTag;
 
-                if (!Facade->ApplyStateChange(Request))
+                if (!State->ApplyStateChange(Request))
                 {
                     bAllApplied = false;
                 }
@@ -337,14 +336,14 @@ bool USyEntityComponent::ApplyStateOperation(const FSyOperation& Operation)
 
         if (!bAny)
         {
-            UE_LOG(LogTemp, Warning, TEXT("ApplyStateOperation: no state parameters found in FSyOperation."));
+        UE_LOG(LogTemp, Warning, TEXT("ApplyStateOperation: no state parameters found in FSyOperation."));
             return false;
         }
 
         return bAllApplied;
     }
 
-    UE_LOG(LogTemp, Error, TEXT("ApplyStateOperation: no StateFacade found. Attach USyEntityStateFacadeComponent and a backend component."));
+    UE_LOG(LogTemp, Error, TEXT("ApplyStateOperation: no USyStateComponent found. Attach USyStateComponent and backend objects."));
     return false;
 }
 

@@ -1,14 +1,13 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "State/SyStateComponent.h"
-#include "State/SyStateManagerSubsystem.h" // 包含 StateManager 子系统
 #include "Entity/SyEntityComponent.h" // Include Entity Component
+#include "Entity/SyEntityRegistry.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Logging/LogMacros.h"
 #include "State/Types/StateContainerTypes.h" // Included via header, but good practice
 #include "State/Types/StateParameterTypes.h" // Included via header, but good practice
-#include "Engine/GameInstance.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSyStateComponent, Log, All); // 添加日志分类
 
@@ -45,41 +44,30 @@ void USyStateComponent::OnSyComponentInitialized()
     // 1. 查找并缓存 EntityComponent
     FindAndCacheEntityComponent();
 
-    // 2. 应用默认初始化数据到本地状态
+    // 2. 应用 Profile 初始化数据（若有）
+    if (StateProfile)
+    {
+        UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applying profile initialization data to Default layer."), *GetNameSafe(GetOwner()));
+        LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Default, StateProfile->DefaultInitData);
+    }
+
+    // 3. 应用组件默认初始化数据（覆盖/补充）
     UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applying initialization data to Default layer."), *GetNameSafe(GetOwner()));
     LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Default, DefaultInitData);
 
-    // 3. 如果启用全局同步，连接到 StateManager 并应用全局状态
-    if (bEnableGlobalSync)
-    {
-        TryConnectToStateManager();
-        if (StateManagerSubsystem)
-        {
-            // 应用全局状态，但不广播（稍后统一广播）
-            FSyStateParameterSet AggregatedMods = StateManagerSubsystem->GetAggregatedModifications(GetTargetTypeTag());
-            LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Persistent, AggregatedMods);
-            
-            UE_LOG(LogSyStateComponent, Log, TEXT("%s: Applied global state from StateManager."), *GetNameSafe(GetOwner()));
-        }
-        else 
-        { 
-            UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Could not connect to StateManagerSubsystem."), *GetNameSafe(GetOwner())); 
-        }
-    }
+    // 4. 初始化后端
+    InitializeBackends();
     
-    // 4. 标记为已完全初始化
+    // 5. 标记为已完全初始化
     bIsFullyInitialized = true;
     
-    // 5. ✅ 广播初始状态（此时所有 Core 阶段组件都已准备好）
+    // 6. ✅ 广播初始状态（此时所有 Core 阶段组件都已准备好）
     UE_LOG(LogSyStateComponent, Log, TEXT("%s: StateComponent fully initialized, broadcasting initial state."), *GetNameSafe(GetOwner()));
     OnEffectiveStateChanged.Broadcast();
 }
 
 void USyStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    // 断开与 StateManager 的连接
-    DisconnectFromStateManager();
-
     Super::EndPlay(EndPlayReason);
 }
 
@@ -188,84 +176,186 @@ bool USyStateComponent::GetEffectiveStateParam(FGameplayTag StateTag, FInstanced
     return false;
 }
 
-// --- Internal Sync Logic --- 
-
-void USyStateComponent::TryConnectToStateManager()
+bool USyStateComponent::ApplyStateChange(const FSyStateChangeRequest& Request)
 {
-    if (StateManagerSubsystem || !GetWorld()) return; // Already connected or no world
-
-    UGameInstance* GameInstance = GetWorld()->GetGameInstance();
-    if (!GameInstance) return;
-
-    StateManagerSubsystem = GameInstance->GetSubsystem<USyStateManagerSubsystem>();
-    if (StateManagerSubsystem)
+    if (!GetWorld())
     {
-        FGameplayTag TargetTag = GetTargetTypeTag();
-        if (!TargetTag.IsValid())
+        return false;
+    }
+
+    if (!bBackendsInitialized)
+    {
+        InitializeBackends();
+    }
+
+    // 允许跨实体转发（唯一入口）
+    if (Request.TargetEntityId.IsValid() && EntityComponent && Request.TargetEntityId != EntityComponent->GetEntityId())
+    {
+        if (USyEntityRegistry* Registry = GetWorld()->GetSubsystem<USyEntityRegistry>())
         {
-            UE_LOG(LogSyStateComponent, Error, TEXT("%s: Cannot subscribe to StateManager - TargetTag is invalid. Entity needs valid tags!"), 
-                *GetNameSafe(GetOwner()));
-            return;
+            if (USyEntityComponent* TargetEntity = Registry->GetEntityById(Request.TargetEntityId))
+            {
+                if (USyStateComponent* TargetState = TargetEntity->FindSyComponent<USyStateComponent>())
+                {
+                    return TargetState->ApplyStateChange(Request);
+                }
+            }
         }
-        
-        // 使用智能订阅（只订阅相关的目标类型）
-        FOnStateModificationChangedNative Delegate;
-        Delegate.BindUObject(this, &USyStateComponent::HandleStateModificationChanged);
-        
-        StateManagerSubsystem->SubscribeToTargetType(TargetTag, this, Delegate);
-        UE_LOG(LogSyStateComponent, Log, TEXT("%s: ✅ Subscribed to StateManager for target type: %s"), 
-            *GetNameSafe(GetOwner()), *TargetTag.ToString());
-    }
-    else 
-    { 
-        UE_LOG(LogSyStateComponent, Error, TEXT("%s: Failed to get StateManagerSubsystem."), *GetNameSafe(GetOwner())); 
-    }
-}
-
-void USyStateComponent::DisconnectFromStateManager()
-{
-    if (StateManagerSubsystem)
-    {
-        // 取消所有智能订阅
-        StateManagerSubsystem->UnsubscribeAll(this);
-        
-        UE_LOG(LogSyStateComponent, Log, TEXT("%s: 🔌 Disconnected from StateManagerSubsystem."), *GetNameSafe(GetOwner()));
-    }
-}
-
-void USyStateComponent::HandleStateModificationChanged(const FSyStateModificationRecord& ChangedRecord)
-{
-    if (!StateManagerSubsystem || !bEnableGlobalSync) return;
-
-    // 智能订阅已过滤不相关记录，直接应用
-    UE_LOG(LogSyStateComponent, VeryVerbose, TEXT("%s: 📨 Received state modification (OpID: %s). Re-applying aggregated modifications."),
-        *GetNameSafe(GetOwner()), *ChangedRecord.Operation.OperationId.ToString());
-     
-    ApplyAggregatedModifications();
-}
-
-void USyStateComponent::ApplyAggregatedModifications()
-{
-    if (!StateManagerSubsystem || !bEnableGlobalSync) return;
-
-    FGameplayTag CurrentTargetTag = GetTargetTypeTag();
-    if (!CurrentTargetTag.IsValid()) 
-    { 
-        UE_LOG(LogSyStateComponent, Warning, TEXT("%s: Cannot apply mods, invalid TargetTag."), *GetNameSafe(GetOwner())); 
-        return; 
+        UE_LOG(LogSyStateComponent, Warning, TEXT("ApplyStateChange: TargetEntityId not found or missing USyStateComponent. TargetEntityId=%s"), *Request.TargetEntityId.ToString());
+        return false;
     }
 
-    FSyStateParameterSet AggregatedMods = StateManagerSubsystem->GetAggregatedModifications(CurrentTargetTag);
-
-    // 应用到持久层（全局状态层）
-    LayeredState.ApplyParameterSetToLayer(ESyStateLayer::Persistent, AggregatedMods);
-
-    UE_LOG(LogSyStateComponent, Verbose, TEXT("%s: Applied aggregated modifications to Persistent layer for Tag %s."), 
-        *GetNameSafe(GetOwner()), *CurrentTargetTag.ToString());
-
-    // Broadcast that the effective state definitely changed (只有在完全初始化后才广播)
-    if (bIsFullyInitialized)
+    bool bApplied = ApplyViaBackends(Request);
+    if (bApplied)
     {
         OnEffectiveStateChanged.Broadcast();
+        return true;
     }
+
+    UE_LOG(LogSyStateComponent, Error, TEXT("ApplyStateChange failed: no backend handled the request. StateTag=%s Scope=%d Layer=%d"),
+        *Request.StateTag.ToString(), (int32)Request.Scope, (int32)Request.Layer);
+    return false;
+}
+
+bool USyStateComponent::TryGetStateValueStruct(FGameplayTag StateTag, FInstancedStruct& OutValue) const
+{
+    if (!bBackendsInitialized)
+    {
+        const_cast<USyStateComponent*>(this)->InitializeBackends();
+    }
+
+    return TryGetViaBackends(StateTag, OutValue);
+}
+
+void USyStateComponent::InitializeBackends()
+{
+    if (bBackendsInitialized)
+    {
+        return;
+    }
+
+    BuildBackendInstances();
+
+    for (USyStateBackendBase* Backend : Backends)
+    {
+        if (Backend)
+        {
+            Backend->InitializeBackend(this);
+        }
+    }
+
+    SortBackends();
+    bBackendsInitialized = true;
+
+    if (Backends.Num() == 0)
+    {
+        UE_LOG(LogSyStateComponent, Warning, TEXT("%s: No state backends configured. State changes will be rejected."), *GetNameSafe(GetOwner()));
+    }
+}
+
+void USyStateComponent::BuildBackendInstances()
+{
+    if (Backends.Num() > 0)
+    {
+        return;
+    }
+
+    TSet<UClass*> UniqueTypes;
+
+    if (StateProfile)
+    {
+        for (const TObjectPtr<USyStateBackendBase>& Template : StateProfile->BackendInstances)
+        {
+            if (!Template)
+            {
+                continue;
+            }
+
+            USyStateBackendBase* NewBackend = DuplicateObject<USyStateBackendBase>(Template, this);
+            if (NewBackend)
+            {
+                Backends.Add(NewBackend);
+                UniqueTypes.Add(NewBackend->GetClass());
+            }
+        }
+    }
+
+    TArray<TSubclassOf<USyStateBackendBase>> TypesToCreate;
+    if (StateProfile)
+    {
+        TypesToCreate.Append(StateProfile->BackendTypes);
+    }
+    TypesToCreate.Append(BackendTypes);
+
+    for (const TSubclassOf<USyStateBackendBase>& Type : TypesToCreate)
+    {
+        if (!Type)
+        {
+            continue;
+        }
+
+        if (UniqueTypes.Contains(*Type))
+        {
+            continue;
+        }
+
+        UniqueTypes.Add(*Type);
+        USyStateBackendBase* NewBackend = NewObject<USyStateBackendBase>(this, Type);
+        if (NewBackend)
+        {
+            Backends.Add(NewBackend);
+        }
+    }
+}
+
+void USyStateComponent::SortBackends()
+{
+    Backends.Sort([](const TObjectPtr<USyStateBackendBase>& A, const TObjectPtr<USyStateBackendBase>& B)
+    {
+        const int32 PA = A ? A->GetBackendPriority() : 0;
+        const int32 PB = B ? B->GetBackendPriority() : 0;
+        return PA > PB;
+    });
+}
+
+bool USyStateComponent::ApplyViaBackends(const FSyStateChangeRequest& LocalRequest)
+{
+    for (USyStateBackendBase* Backend : Backends)
+    {
+        if (!Backend)
+        {
+            continue;
+        }
+
+        if (!Backend->CanHandleChange(LocalRequest))
+        {
+            continue;
+        }
+
+        if (Backend->ApplyChange(LocalRequest))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool USyStateComponent::TryGetViaBackends(const FGameplayTag& StateTag, FInstancedStruct& OutValue) const
+{
+    for (USyStateBackendBase* Backend : Backends)
+    {
+        if (!Backend)
+        {
+            continue;
+        }
+
+        if (Backend->TryGetValueStruct(StateTag, OutValue))
+        {
+            return true;
+        }
+    }
+
+    OutValue.Reset();
+    return false;
 }

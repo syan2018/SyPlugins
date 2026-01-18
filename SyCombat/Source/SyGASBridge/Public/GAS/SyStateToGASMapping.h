@@ -11,7 +11,7 @@ class UGameplayEffect;
  * SyState -> GAS Tag 映射
  *
  * 设计目标：
- * - 让任务/关卡等系统只需要写 SyState（通过 StateFacade）
+ * - 让任务/关卡等系统只需要写 SyState（通过 StateComponent）
  * - 由 GASBridge 统一把关键状态“变成 ASC 上的 Tag/Effect”，从而影响 Ability 可用性/分支/死亡等逻辑
  */
 USTRUCT(BlueprintType)
