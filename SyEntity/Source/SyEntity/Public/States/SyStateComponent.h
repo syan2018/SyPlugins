@@ -216,4 +216,4 @@ bool USyStateComponent::GetEffectiveStateValue(FGameplayTag StateTag, T& OutValu
         // Optional: Log type mismatch warning?
     }
     return false;
-} 
+}

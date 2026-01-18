@@ -43,7 +43,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "SyIdentity")
     void GenerateEntityId();
 
-
 protected:
     virtual void BeginPlay() override;
 

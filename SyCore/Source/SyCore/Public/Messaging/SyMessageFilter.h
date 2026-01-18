@@ -96,5 +96,5 @@ public:
 
 private:
     UPROPERTY()
-    TArray<USyMessageFilter*> Filters;
-}; 
+    TArray<TObjectPtr<USyMessageFilter>> Filters;
+};

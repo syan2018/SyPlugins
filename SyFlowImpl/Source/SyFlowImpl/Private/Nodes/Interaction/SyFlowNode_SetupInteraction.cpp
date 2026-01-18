@@ -56,4 +56,4 @@ FSyOperationModifier USyFlowNode_SetupInteraction::GetOperationModifier() const
     }
 
     return Modifier;
-} 
+}

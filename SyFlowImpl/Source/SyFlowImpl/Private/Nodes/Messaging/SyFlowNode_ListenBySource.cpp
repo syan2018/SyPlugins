@@ -55,4 +55,4 @@ FString USyFlowNode_ListenBySource::GetNodeDescription() const
     return FString::Printf(TEXT("Listen Message By Source\nType: %s\nAlias: %s"),
         *SourceTag.ToString(),
         *SourceAlias.ToString());
-} 
+}

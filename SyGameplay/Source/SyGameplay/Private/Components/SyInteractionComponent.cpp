@@ -271,7 +271,7 @@ void USyInteractionComponent::ProcessFlowInteraction(const FInstancedStruct& Int
             *FlowComponent->GetName());
         
         // FlowSubsystem->StartFlowForComponent(FlowComponent, FlowInfo->FlowAsset.LoadSynchronous(), FlowInfo->InputPayload);
-        FlowSubsystem->StartRootFlow(FlowComponent, FlowInfo->FlowAsset.LoadSynchronous());
+        FlowSubsystem->StartRootFlow(FlowComponent, FlowInfo->FlowAsset.LoadSynchronous(), TScriptInterface<IFlowDataPinValueSupplierInterface>());
 
         // TODO: 常用礼仪是挂个监听Flow完成，但好像不支持
         // 所以后续到 Flow 里实现一个节点，处理对话完成时，基于Owner尝试发送 Event.Interaction.End 吧（）

@@ -141,4 +141,4 @@ private:
     
     /** 清理无效订阅者 */
     void CleanupInvalidSubscribers();
-}; 
+};

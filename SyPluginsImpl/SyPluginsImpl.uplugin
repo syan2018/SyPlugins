@@ -1,17 +1,33 @@
-{
-	"FileVersion": 3,
-	"Version": 1,
-	"VersionName": "1.0",
-	"FriendlyName": "SyPluginsImpl",
-	"Description": "SyPlugins的综合实践和应用参考，如测试用Flow、模板Actor、关联Tags配置等",
-	"Category": "Other",
-	"CreatedBy": "Syan",
-	"CreatedByURL": "",
-	"DocsURL": "",
-	"MarketplaceURL": "",
-	"SupportURL": "",
-	"CanContainContent": true,
-	"IsBetaVersion": false,
-	"IsExperimentalVersion": false,
-	"Installed": false
+{
+
+	"FileVersion": 3,
+
+	"Version": 1,
+
+	"VersionName": "1.0",
+
+	"FriendlyName": "SyPluginsImpl",
+
+	"Description": "SyPlugins的综合实践和应用参考，如测试用Flow、模板Actor、关联Tags配置等",
+
+	"Category": "Other",
+
+	"CreatedBy": "Syan",
+
+	"CreatedByURL": "",
+
+	"DocsURL": "",
+
+	"MarketplaceURL": "",
+
+	"SupportURL": "",
+
+	"CanContainContent": true,
+
+	"IsBetaVersion": false,
+
+	"IsExperimentalVersion": false,
+
+	"Installed": false
+
 }

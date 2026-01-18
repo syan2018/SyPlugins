@@ -124,4 +124,4 @@ void USySpawnComponent::HandleStateChanged()
             UE_LOG(LogSySpawn, Verbose, TEXT("%s: Despawned actor due to missing State.Spawner.Enable tag."), *GetNameSafe(GetOwner()));
         }
     }
-} 
+}

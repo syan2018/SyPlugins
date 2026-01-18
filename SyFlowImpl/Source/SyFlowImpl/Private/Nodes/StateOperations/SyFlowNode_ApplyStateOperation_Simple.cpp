@@ -26,4 +26,4 @@ FSyOperationModifier USyFlowNode_ApplyStateOperation_Simple::GetOperationModifie
 // {
 //     return FText::FromString("Applies a state operation with one Modifier (from base class) and a manually configured Source.");
 // }
-#endif 
+#endif

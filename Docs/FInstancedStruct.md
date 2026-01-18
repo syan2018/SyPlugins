@@ -125,7 +125,6 @@ A:
                  // return; // Exit early if tag is cleared
              }
 
-
             // 3. Get the current struct type in the FInstancedStruct
             UScriptStruct* CurrentStructType = ActionParams.Parameters.GetScriptStruct();
 
@@ -246,7 +245,6 @@ A:
 
         if (!StructPropertyHandle || !StructPropertyHandle->IsValidHandle()) return;
 
-
         // Now get the handles to the members *inside* FSyTaggedInstancedStruct
         TagPropertyHandle = StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FSyTaggedInstancedStruct, DefiningTag));
         ParametersPropertyHandle = StructPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FSyTaggedInstancedStruct, Parameters));
@@ -263,7 +261,6 @@ A:
         // TODO: Advanced - Could potentially replace the widget with one that filters the struct picker based on the tag, but that's complex.
         // For now, we just show the default FInstancedStruct editor.
         Category.AddProperty(ParametersPropertyHandle);
-
 
         // --- Handle Tag Changes ---
         TagPropertyHandle->SetOnPropertyValueChanged(IDetailPropertyUtilities::FOnPropertyValueChanged::CreateSP(this, &FSyTaggedInstancedStructCustomization::OnTagChanged));
@@ -325,7 +322,6 @@ A:
          }
     }
 
-
     UScriptStruct* FSyTaggedInstancedStructCustomization::GetExpectedStructTypeFromTag(const FGameplayTag& Tag) const
     {
         if (!Tag.IsValid()) return nullptr;
@@ -364,14 +360,12 @@ A:
                  FOnGetDetailCustomizationInstance::CreateStatic(&FSyTaggedInstancedStructCustomization::MakeInstance) // Your customization class factory
              );
 
-
             // OR, if you want to customize the FSyTaggedInstancedStruct *wherever it appears*
             // (More complex setup might be needed inside the customization to handle different outer objects)
             // PropertyModule.RegisterCustomPropertyTypeLayout(
             //    FSyTaggedInstancedStruct::StaticStruct()->GetFName(),
             //    FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FSyTaggedInstancedStructCustomization::MakeInstance) // Needs IPropertyTypeCustomization base instead
             // );
-
 
             PropertyModule.NotifyCustomizationModuleChanged();
         }
@@ -407,6 +401,5 @@ A:
 *   **错误处理**: 在代码中添加日志和空指针检查，以处理 Tag 没有关联 Schema 或 Schema 无法加载的情况。
 
 选择哪种方式取决于你对编辑器体验的要求和愿意投入的开发时间。
-
 
 尝试为我分析在编辑器下为任意Tag携带匹配的预定义数据结构的上述两种方法的可行性？

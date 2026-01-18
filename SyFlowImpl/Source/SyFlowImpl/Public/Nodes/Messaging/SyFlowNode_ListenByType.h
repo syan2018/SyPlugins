@@ -40,4 +40,4 @@ protected:
     // 消息内容数据
     UPROPERTY()
     FFlowDataPinOutputProperty_String MessageContentPin;
-}; 
+};

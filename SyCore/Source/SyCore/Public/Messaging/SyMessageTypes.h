@@ -104,4 +104,4 @@ struct SYCORE_API FSyMessage
         , Priority(ESyMessagePriority::Normal)
         , MessageId(FGuid::NewGuid())
     {}
-}; 
+};

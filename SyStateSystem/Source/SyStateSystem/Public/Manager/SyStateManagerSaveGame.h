@@ -23,4 +23,4 @@ public:
     /** 存档标识符 (可选，用于版本控制或识别) */
     UPROPERTY(VisibleAnywhere, Category = Basic)
     FString SaveGameVersion = TEXT("1.0");
-}; 
+};

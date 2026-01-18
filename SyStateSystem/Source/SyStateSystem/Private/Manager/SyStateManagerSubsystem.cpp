@@ -447,7 +447,6 @@ const TArray<FSyStateModificationRecord>& USyStateManagerSubsystem::GetAllModifi
     return ModificationLog;
 }
 
-
 bool USyStateManagerSubsystem::SaveLog()
 {
     // 创建或获取 SaveGame 对象
@@ -522,7 +521,6 @@ bool USyStateManagerSubsystem::LoadLog()
     ModificationLog.Empty();
     return false;
 }
-
 
 void USyStateManagerSubsystem::AddRecordAndBroadcast(const FSyStateModificationRecord& Record)
 {

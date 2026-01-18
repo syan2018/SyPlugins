@@ -58,7 +58,6 @@ public:
 
 	DECLARE_FUNCTION(execGetStructPropertyAsStruct);
 
-
 	// ========================================================================
 	// DataTable Access (Row Name + Column Name)
 	// ========================================================================
@@ -97,7 +96,6 @@ public:
 
 	DECLARE_FUNCTION(execGetDataTableValueAsStruct);
 
-
 	// ========================================================================
 	// DataTable Column Access (Column Map)
 	// ========================================================================
@@ -110,7 +108,6 @@ public:
 	static bool GetDataTableRowColumnsAsMap(UDataTable* DataTable, FName RowName, UPARAM(ref) TMap<FName, int32>& OutColumnMap);
 
 	DECLARE_FUNCTION(execGetDataTableRowColumnsAsMap);
-
 
 	// ========================================================================
 	// Helpers

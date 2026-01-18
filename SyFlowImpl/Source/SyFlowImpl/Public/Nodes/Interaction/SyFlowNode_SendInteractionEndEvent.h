@@ -31,4 +31,4 @@ protected:
 	/** The tag for the message to send. */
 	UPROPERTY(EditAnywhere, Category = "Message")
 	FGameplayTag MessageTag = FGameplayTag::RequestGameplayTag(FName("Event.Interaction.End"));
-}; 
+};

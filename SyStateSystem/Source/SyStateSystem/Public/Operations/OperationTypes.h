@@ -50,7 +50,6 @@ struct SYSTATESYSTEM_API FSyOperationSource
     bool HasValidAlias() const { return SourceAlias != NAME_None; }
 };
 
-
 /**
  * FSyOperationTarget - 操作目标
  * 
@@ -93,7 +92,6 @@ struct SYSTATESYSTEM_API FSyOperationTarget
     bool HasValidAlias() const { return TargetAlias != NAME_None; }
     
 };
-
 
 /**
  * FSyOperationModifier - 操作修饰器
@@ -147,7 +145,6 @@ struct SYSTATESYSTEM_API FSyOperationModifier
     }
 };
 
-
 /**
  * FSyOperation - 操作
  * 
@@ -183,4 +180,4 @@ struct SYSTATESYSTEM_API FSyOperation
     /** 操作ID */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation")
     FGuid OperationId;
-}; 
+};

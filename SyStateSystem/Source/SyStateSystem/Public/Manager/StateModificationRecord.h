@@ -46,4 +46,4 @@ struct SYSTATESYSTEM_API FSyStateModificationRecord
     // TODO: [拓展] 可以考虑添加额外的元数据，例如：
     // - 操作是被哪个系统或流程发起的？(FGameplayTag SourceSystemTag?)
     // - 操作执行的结果状态？(ESyOperationResult ResultStatus?) - 但这会增加StateManager的职责，需要谨慎考虑
-}; 
+};

@@ -32,4 +32,4 @@ public:
     virtual FText GetNodeTitle() const override { return FText::FromString("Apply State Op (Simple)"); }
     virtual FText GetNodeToolTip() const override { return FText::FromString("Applies a state operation with one Modifier (from base class) and a manually configured Source."); }
 #endif
-}; 
+};

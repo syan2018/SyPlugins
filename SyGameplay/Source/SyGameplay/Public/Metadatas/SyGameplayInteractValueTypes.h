@@ -10,7 +10,6 @@
 #include "FlowAsset.h"
 #include "SyGameplayInteractValueTypes.generated.h"
 
-
 // Forward declaration for Flow Asset (avoids direct include dependency in header if possible)
 // class UFlowAsset; 
 
@@ -58,7 +57,7 @@ struct SYGAMEPLAY_API FSyFlowInteractInfo : public FSyInteractInfoBase
 	GENERATED_BODY()
 
 	/** 要触发的 Flow 资源 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction Info", meta = (AllowedClasses = "FlowAsset"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Interaction Info", meta = (AllowedClasses = "/Script/Flow.FlowAsset"))
 	TSoftObjectPtr<UFlowAsset> FlowAsset; // Requires Flow module dependency
 
 	/** 传递给 Flow 的输入数据 */
@@ -92,7 +91,6 @@ struct SYGAMEPLAY_API FSyStateTreeInteractInfo : public FSyInteractInfoBase
 		InteractTypeTag = FGameplayTag::RequestGameplayTag(FName("Interaction.StateTree")); // Example Tag
 	}
 };
-
 
 /**
  * @brief 存储交互信息列表的值类型结构体。
@@ -159,4 +157,4 @@ struct SYGAMEPLAY_API FSyInteractionListValue : public FSyListParameterBase // �
 	*/
 
 	// 可以在这里添加其他特定于交互列表的 UFUNCTION 或辅助函数（如果需要的话）
-}; 
+};

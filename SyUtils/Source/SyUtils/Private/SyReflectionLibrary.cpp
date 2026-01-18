@@ -201,7 +201,6 @@ DEFINE_FUNCTION(USyReflectionLibrary::execGetDataTableValueAsStruct)
 	P_NATIVE_END;
 }
 
-
 DEFINE_FUNCTION(USyReflectionLibrary::execGetDataTableRowColumnsAsMap)
 {
 	P_GET_OBJECT(UDataTable, DataTable);
@@ -226,7 +225,6 @@ DEFINE_FUNCTION(USyReflectionLibrary::execGetDataTableRowColumnsAsMap)
 	*(bool*)RESULT_PARAM = Generic_GetDataTableRowColumnsAsMap(DataTable, RowName, OutputMapProp, OutputMapAddr);
 	P_NATIVE_END;
 }
-
 
 // ============================================================================
 // DataTable Access
@@ -262,7 +260,6 @@ bool USyReflectionLibrary::GetDataTableValueAsFloat(UDataTable* DataTable, FName
 
 	return Generic_GetPropertyAsFloat(DataTable->RowStruct, RowData, ColumnName, OutFloatValue);
 }
-
 
 // ============================================================================
 // Helpers (The Core Logic)

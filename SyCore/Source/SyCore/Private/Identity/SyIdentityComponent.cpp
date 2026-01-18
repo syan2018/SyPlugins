@@ -17,7 +17,6 @@ void USyIdentityComponent::BeginPlay()
             *GetEntityAlias().ToString());
 }
 
-
 void USyIdentityComponent::GenerateEntityId()
 {
     if (!EntityId.IsValid())
@@ -26,4 +25,3 @@ void USyIdentityComponent::GenerateEntityId()
         OnEntityIdGenerated.Broadcast();
     }
 }
-

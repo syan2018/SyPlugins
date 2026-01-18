@@ -40,4 +40,4 @@ protected:
     UPROPERTY()
     FFlowDataPinOutputProperty_String MessageContentPin;
     
-}; 
+};

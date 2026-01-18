@@ -4,7 +4,6 @@
 #include "UObject/Object.h"
 #include "SyConditionBase.generated.h"
 
-
 UCLASS(Abstract, Blueprintable, BlueprintType, AutoExpandCategories = ("Default"), EditInlineNew,
 	meta=(ContextMenuCategory = "SyPlugins", ContextMenuEntryName = "SyPlugins|Condition", ContextMenuPrefix = "CDT_"))
 class SYCORE_API UOSyConditionBase : public UObject

@@ -45,5 +45,5 @@ protected:
 private:
     // 消息过滤器
     UPROPERTY()
-    USyMessageFilterComposer* MessageFilter;
-}; 
+    TObjectPtr<USyMessageFilterComposer> MessageFilter;
+};

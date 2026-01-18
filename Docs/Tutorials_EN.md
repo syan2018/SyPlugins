@@ -167,4 +167,4 @@ Both are sent using the `SyMessage` component, based on the identity defined by 
 
 (The image below shows an entity triggering Flow via `SyInteractComponent` and sending an interaction complete message via the `SendInteractEnd` node. The interaction start message is handled similarly in C++.)
 
-Based on this message bus, the connection between Entity / State / Interaction is simply implemented, initially defining an easily extensible plugin framework. Feel free to discuss and use it together. 
+Based on this message bus, the connection between Entity / State / Interaction is simply implemented, initially defining an easily extensible plugin framework. Feel free to discuss and use it together.

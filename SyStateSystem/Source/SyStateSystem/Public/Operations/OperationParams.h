@@ -38,4 +38,4 @@ struct SYSTATESYSTEM_API FInteractionSourceParams
     /** 是否需要视线 */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyOperation|Interaction")
     bool bRequiresLineOfSight = false;
-}; 
+};

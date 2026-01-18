@@ -11,13 +11,11 @@ DEFINE_LOG_CATEGORY_STATIC(LogSyFlowNodeStateOpBase, Log, All);
 USyFlowNode_StateOperationBase::USyFlowNode_StateOperationBase()
 {
     // Add the new "Unload" input pin alongside the standard "In"
-    InputPins = { SyFlowNodeStateOpInputPins::In, SyFlowNodeStateOpInputPins::Unload }; 
+    InputPins = { FFlowPin(SyFlowNodeStateOpInputPins::In), FFlowPin(SyFlowNodeStateOpInputPins::Unload) }; 
     // Add the optional Unloaded output pin
-    OutputPins = { SyFlowNodeStateOpOutputPins::Out, SyFlowNodeStateOpOutputPins::Unloaded }; 
+    OutputPins = { FFlowPin(SyFlowNodeStateOpOutputPins::Out), FFlowPin(SyFlowNodeStateOpOutputPins::Unloaded) };
     AppliedOperationId.Invalidate(); // Ensure it starts invalid
 }
-
-
 
 void USyFlowNode_StateOperationBase::ExecuteInput(const FName& PinName)
 {
@@ -157,4 +155,4 @@ void USyFlowNode_StateOperationBase::PostEditChangeProperty(FPropertyChangedEven
         UE_LOG(LogSyFlowNodeStateOpBase, Log, TEXT("%s: Node configuration changed in editor, invalidated AppliedOperationId."), *GetNodeTitle().ToString());
     }
 }
-#endif 
+#endif

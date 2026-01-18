@@ -362,7 +362,6 @@ protected:
     FTransform Value = FTransform::Identity;
 };
 
-
 UCLASS(Blueprintable)
 class SYSTATESYSTEM_API USyTagMetadata : public USyStateMetadataBase
 {
@@ -396,4 +395,3 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SyStateCore|TagStateMetadata")
     FGameplayTag Value;
 };
-

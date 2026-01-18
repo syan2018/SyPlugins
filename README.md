@@ -11,7 +11,6 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
 
 初版使用引导见： [Tutorials](Docs/Tutorials.md)
 
-
 ### 项目依赖
 
 - [ModularityPractice](https://github.com/Variann/ModularityPractice) 项目运转部分依赖 Variann 的 ModularityPractice，感谢 TagMetadata 为本项目的信息和状态管理提供核心思路
@@ -20,7 +19,6 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
    - **TagFacts**：基于Tag和Int储存全局变量的插件，项目预期基于 TagFacts 扩充任务系统实现，支持游戏流程状态信息储存
    - 项目中其它轮子也相当值得学习！强烈推荐
 - [FlowGraph](https://github.com/MothCocoon/FlowGraph) 插件系统运转的编辑实现依赖，非常易用的 Unreal Gameplay 流程管理框架
-
 
 ## 核心理念
 - **状态驱动**: 基于"操作记录"统一管理游戏对象全局状态及其转换
@@ -33,11 +31,9 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
 
 ![Overview](Docs/assets/Overview.png)
 
-
 ## 使用参考
 
 [Tutorials](Docs/Tutorials.md)
-
 
 ## 插件层级
 1. **SyCore**
@@ -103,7 +99,6 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
 
 （碎碎念）
 
-
 项目思路源自在前司为单机设计，但因空降乐子未能妥善落实的框架。最初的核心思路为 **分层逻辑管理** 与 **消息总线**。
 
 1. 在游戏层面上，为流程逻辑和对象逻辑进行层级拆分
@@ -117,4 +112,3 @@ SyPlugins 是一个为 Unreal Engine 开发的模块化插件系统，专注于�
 4. （待实现）逻辑的前后端分层与维护
 
 汇总后对游戏任务和关卡底层的设计思路逐渐清晰，恰逢朋友做demo投米，遂协助搭一轮子添把柴。再加之近期辞职搞 AI 创业，搭着 Cursor 把这玩意儿写出来，拾一下 Vibe Coding 工程习惯，顺便给 TD 生涯留条退路，岂不美哉。
-

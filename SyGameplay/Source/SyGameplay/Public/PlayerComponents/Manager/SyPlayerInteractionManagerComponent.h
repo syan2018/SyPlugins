@@ -61,4 +61,4 @@ public:
     /** 获取当前激活的交互组件 */
     UFUNCTION(BlueprintPure, Category = "Interaction")
     USyInteractionComponent* GetActiveInteraction() const;
-}; 
+};

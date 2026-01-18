@@ -22,4 +22,4 @@ namespace SySubsystemUtils
         }
         return nullptr;
     }
-} 
+}

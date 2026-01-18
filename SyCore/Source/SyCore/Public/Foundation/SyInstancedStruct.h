@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "SyInstancedStruct.generated.h"
 
-
 /**
  * FSyBaseInstancedStruct
  * 

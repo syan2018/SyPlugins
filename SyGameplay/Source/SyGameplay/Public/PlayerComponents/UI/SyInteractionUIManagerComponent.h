@@ -48,4 +48,4 @@ protected:
     /** 更新Widget上的交互文本 (需要Widget实现特定接口或函数) */
     virtual void UpdateInteractionWidgetText(const FText& PromptText);
 
-}; 
+};

@@ -1,6 +1,5 @@
 #include "Messaging/SyMessageFilter.h"
 
-
 bool USySourceTypeFilter::Matches(const FSyMessage& Message) const
 {
     return Message.Source.SourceType == SourceType;
@@ -44,4 +43,4 @@ bool USyMessageFilterComposer::Matches(const FSyMessage& Message) const
         }
     }
     return true;
-} 
+}

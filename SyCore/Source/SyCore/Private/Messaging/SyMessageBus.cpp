@@ -347,4 +347,4 @@ void USyMessageBus::DispatchMessage(const FSyMessage& Message)
             ISyMessageReceiver::Execute_OnMessageReceived(Subscriber, Message);
         }
     }
-} 
+}

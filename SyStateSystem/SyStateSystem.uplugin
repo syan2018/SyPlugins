@@ -20,5 +20,15 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
+	],
+	"Plugins": [
+		{
+			"Name": "SyCore",
+			"Enabled": true
+		},
+		{
+			"Name": "TagMetadata",
+			"Enabled": true
+		}
 	]
 }

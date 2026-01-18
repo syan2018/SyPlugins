@@ -38,4 +38,4 @@ USyMessageFilterComposer* USyFlowNode_ListenByType::CreateMessageFilter() const
 FString USyFlowNode_ListenByType::GetNodeDescription() const
 {
     return FString::Printf(TEXT("Listen Message By Type\nType: %s"), *MessageType.ToString());
-} 
+}

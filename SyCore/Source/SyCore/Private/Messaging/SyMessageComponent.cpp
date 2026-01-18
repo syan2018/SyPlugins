@@ -22,8 +22,6 @@ void USyMessageComponent::BeginPlay()
     IdentityComponent = GetOwner()->FindComponentByClass<USyIdentityComponent>();
 }
 
-
-
 bool USyMessageComponent::SendMessage(const FGameplayTag& MessageType)
 {
     return SendMessageInternal(MessageType, TMap<FName, FString>());
@@ -62,4 +60,4 @@ bool USyMessageComponent::SendMessageInternal(const FGameplayTag& MessageType, c
 USyMessageBus* USyMessageComponent::GetMessageBus() const
 {
     return SySubsystemUtils::GetSubsystem<USyMessageBus>(GetWorld());
-} 
+}

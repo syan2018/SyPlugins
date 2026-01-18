@@ -7,8 +7,6 @@
 #include "StructUtils/InstancedStruct.h"
 #include "StateParameterTypes.generated.h"
 
-
-
 /**
  * FSyStateParams - 状态参数
  * 
@@ -301,4 +299,4 @@ struct SYSTATESYSTEM_API FSyStateParameterSet
 		return Parameters.RemoveAll([&StateTag](const FSyStateParams& Item){ return Item.Tag == StateTag; });
 	}
 
-}; 
+};

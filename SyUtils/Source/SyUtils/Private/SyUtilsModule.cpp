@@ -16,4 +16,3 @@ void FSyUtilsModule::ShutdownModule()
 #undef LOCTEXT_NAMESPACE
 	
 IMPLEMENT_MODULE(FSyUtilsModule, SyUtils)
-

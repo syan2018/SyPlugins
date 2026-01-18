@@ -311,4 +311,4 @@ T* FSyLayeredStateContainer::FindStateMetadataInLayer(ESyStateLayer Layer, const
 		return LayerState->FindFirstStateMetadata<T>(StateTag);
 	}
 	return nullptr;
-} 
+}

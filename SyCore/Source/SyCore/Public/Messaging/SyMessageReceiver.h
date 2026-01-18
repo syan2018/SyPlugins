@@ -19,4 +19,4 @@ public:
     // 消息接收接口
     UFUNCTION(BlueprintNativeEvent, Category = "SyMessage")
     void OnMessageReceived(const FSyMessage& Message);
-}; 
+};

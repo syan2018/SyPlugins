@@ -8,8 +8,8 @@
 
 USyFlowNode_SendInteractionEndEvent::USyFlowNode_SendInteractionEndEvent()
 {
-	InputPins = { TEXT("Send") };
-	OutputPins = { TEXT("Sent") };
+	InputPins = { FFlowPin(TEXT("Send")) };
+	OutputPins = { FFlowPin(TEXT("Sent")) };
 }
 
 void USyFlowNode_SendInteractionEndEvent::ExecuteInput(const FName& PinName)
@@ -45,4 +45,4 @@ void USyFlowNode_SendInteractionEndEvent::ExecuteInput(const FName& PinName)
 		// Trigger the output pin regardless of send success?
 		TriggerOutput(TEXT("Sent"), true);
 	}
-} 
+}

@@ -88,4 +88,4 @@ public:
     virtual FString GetNodeCategory() const override { return TEXT("SyPlugin|StateOp"); }
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override; // To clear ID if config changes
 #endif
-}; 
+};

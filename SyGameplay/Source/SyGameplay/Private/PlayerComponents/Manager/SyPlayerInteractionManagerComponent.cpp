@@ -139,4 +139,4 @@ bool USyPlayerInteractionManagerComponent::TryExecuteActiveInteraction()
 USyInteractionComponent* USyPlayerInteractionManagerComponent::GetActiveInteraction() const
 {
     return ActiveInteraction.Get();
-} 
+}

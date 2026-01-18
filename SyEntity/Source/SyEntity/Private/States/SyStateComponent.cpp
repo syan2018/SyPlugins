@@ -269,4 +269,3 @@ void USyStateComponent::ApplyAggregatedModifications()
         OnEffectiveStateChanged.Broadcast();
     }
 }
-

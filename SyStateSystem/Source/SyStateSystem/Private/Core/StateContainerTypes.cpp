@@ -42,7 +42,6 @@ static USyStateMetadataBase* FindOrAddLocalMetadataInstance(FSyStateMetadatas& L
     return TemplateMetadata; // Return the newly added instance
 }
 
-
 // --- FSyStateCategories Implementation --- 
 
 void FSyStateCategories::ApplyInitData(const FSyStateParameterSet& InitData)
@@ -428,5 +427,3 @@ void FSyLayeredStateContainer::InvalidateCache()
 {
 	++CurrentVersion;
 }
-
-

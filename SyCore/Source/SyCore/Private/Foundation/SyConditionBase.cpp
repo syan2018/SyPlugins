@@ -14,4 +14,4 @@ UWorld* UOSyConditionBase::GetWorld() const
     }
 	
     return GEngine->GameViewport->GetWorld();
-} 
+}

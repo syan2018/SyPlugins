@@ -16,9 +16,6 @@ Tutorials in: [Tutorials](Docs/Tutorials_EN.md)
    - Other tools in the project are also worth learning! Highly recommended.
 - [FlowGraph](https://github.com/MothCocoon/FlowGraph): The system relies on this for its editor implementation; a very user-friendly Unreal Gameplay flow management framework.
 
-
-
-
 ## Core Concepts
 - **State-Driven**: Uniformly manage the global state and transitions of game objects based on "operation records".
 - **Message-Driven**: Use a message bus to implement interaction and perceive player behavior (and manage processes through Flow or other plugins).
@@ -29,7 +26,6 @@ Tutorials in: [Tutorials](Docs/Tutorials_EN.md)
 The system briefly implements the following logic chain:
 
 ![Overview](Docs/assets/Overview.png)
-
 
 ## Plugin Hierarchy
 

@@ -42,4 +42,4 @@ public:
     virtual FText GetNodeToolTip() const override { return FText::FromString("Applies an operation to enable interaction and set the interaction info list."); }
     virtual FString GetNodeCategory() const override { return TEXT("SyPlugin|Interaction"); }
 #endif
-}; 
+};

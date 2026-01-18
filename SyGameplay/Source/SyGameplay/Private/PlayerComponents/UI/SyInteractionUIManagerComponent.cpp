@@ -131,4 +131,4 @@ void USyInteractionUIManagerComponent::UpdateInteractionWidgetText(const FText& 
             // UE_LOG(LogTemp, Warning, TEXT("Could not find TextBlock named 'InteractionPromptText' in the Interaction Widget."));
         }
     }
-} 
+}

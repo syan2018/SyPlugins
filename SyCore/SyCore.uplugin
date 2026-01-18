@@ -1,24 +1,24 @@
-{
-	"FileVersion": 3,
-	"Version": 1,
-	"VersionName": "1.0",
-	"FriendlyName": "SyCore",
-	"Description": "工具链底层模块，包含身份识别、消息总线等底层基本模块",
-	"Category": "Other",
-	"CreatedBy": "Syan",
-	"CreatedByURL": "",
-	"DocsURL": "",
-	"MarketplaceURL": "",
-	"SupportURL": "",
-	"CanContainContent": true,
-	"IsBetaVersion": false,
-	"IsExperimentalVersion": false,
-	"Installed": false,
-	"Modules": [
-		{
-			"Name": "SyCore",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		}
-	]
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "SyCore",
+	"Description": "工具链底层模块，包含身份识别、消息总线等底层基本模块",
+	"Category": "Other",
+	"CreatedBy": "Syan",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "SyCore",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
 }
