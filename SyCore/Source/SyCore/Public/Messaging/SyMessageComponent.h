@@ -2,9 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Identity/SyIdentityComponent.h"
+#include "Entity/SyIdentityComponent.h"
 #include "SyMessageTypes.h"
-#include "Components/ISyComponentInterface.h"
+#include "Foundation/ISyComponentInterface.h"
 #include "SyMessageComponent.generated.h"
 
 /**

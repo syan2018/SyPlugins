@@ -35,9 +35,7 @@ public class SyGameplay : ModuleRules
 			new string[]
 			{
 				"Core",
-				"SyCore",
-				"SyEntity",
-				"SyStateSystem",
+				"SyCore",           // SyEntity and SyStateSystem are now merged into SyCore
 				"TagMetadata",
 				"AIModule",
 				"GameplayTags",
@@ -57,9 +55,15 @@ public class SyGameplay : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				// ... add private dependencies that you statically link with here ...	
+				// ... add private dependencies that you statically link with here ...
 			}
 			);
+
+		// Editor dependencies (merged from SyFlowImpl)
+		// if (Target.bBuildEditor == true)
+		// {
+		// 	// These dependencies have been moved to SyGameplayEditor module
+		// }
 		
 		
 		DynamicallyLoadedModuleNames.AddRange(

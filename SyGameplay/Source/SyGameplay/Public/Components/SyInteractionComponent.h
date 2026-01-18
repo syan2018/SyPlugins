@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/Base/InteractionComponent.h"
-#include "SyCore/Public/Components/ISyComponentInterface.h"
+#include "Foundation/ISyComponentInterface.h"
 #include "GameplayTagContainer.h" // For FGameplayTag
 #include "Metadatas/SyGameplayInteractValueTypes.h" // Include value types for delegate param
 #include "SyInteractionComponent.generated.h"

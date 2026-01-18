@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/Base/SpawnComponent.h"
-#include "SyCore/Public/Components/ISyComponentInterface.h"
+#include "Foundation/ISyComponentInterface.h"
 #include "SySpawnComponent.generated.h"
 
 /**

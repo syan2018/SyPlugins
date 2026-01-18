@@ -1,6 +1,6 @@
 #include "Messaging/SyMessageComponent.h"
 #include "Messaging/SyMessageBus.h"
-#include "Identity/SyIdentityComponent.h"
+#include "Entity/SyIdentityComponent.h"
 #include "Foundation/Utilities/SySubsystemUtils.h"
 
 USyMessageComponent::USyMessageComponent()

@@ -19,19 +19,16 @@
 			"Name": "SyGameplay",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "SyGameplayEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
 		{
 			"Name": "SyCore",
-			"Enabled": true
-		},
-		{
-			"Name": "SyEntity",
-			"Enabled": true
-		},
-		{
-			"Name": "SyStateSystem",
 			"Enabled": true
 		},
 		{

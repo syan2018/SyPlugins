@@ -5,7 +5,7 @@
 #include "StateTreeReference.h"   // For FStateTreeReference
 #include "StructUtils/InstancedStruct.h" // For FInstancedStruct
 #include "Foundation/SyInstancedStruct.h" // For FSyBaseInstancedStruct
-#include "Core/Metadatas/ListMetadataValueTypes.h" // For FSyListParameterBase (needs SyStateSystem dependency)
+#include "State/Types/Metadatas/ListMetadataValueTypes.h" // For FSyListParameterBase (from SyCore)
 #include "UObject/SoftObjectPtr.h" // For TSoftObjectPtr
 #include "FlowAsset.h"
 #include "SyGameplayInteractValueTypes.generated.h"
