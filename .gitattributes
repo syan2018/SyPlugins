@@ -1,6 +1,11 @@
 # UE项目大文件规则
 # Git LFS rules for Unreal Engine project
 
+# Force text files
+*.uplugin text
+*.uproject text
+*.ini text
+
 # Unreal specific file types
 # uasset
 *.[uU][aA][sS][sS][eE][tT] filter=lfs diff=lfs merge=binary -text
