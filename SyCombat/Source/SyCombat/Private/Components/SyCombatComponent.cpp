@@ -2,6 +2,7 @@
 
 #include "Components/SyCombatComponent.h"
 
+#include "Components/SkeletalMeshComponent.h"
 #include "Entity/SyEntityComponent.h"
 
 USyCombatComponent::USyCombatComponent()
@@ -100,7 +101,24 @@ FGameplayTagContainer USyCombatComponent::GetCombatTags_Implementation() const
 
 FVector USyCombatComponent::GetTargetingPoint_Implementation(FGameplayTag BoneTag) const
 {
-	return EntityComponent ? EntityComponent->GetTargetingPoint(BoneTag) : FVector::ZeroVector;
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return FVector::ZeroVector;
+	}
+
+	if (USkeletalMeshComponent* SkelComp = OwnerActor->FindComponentByClass<USkeletalMeshComponent>())
+	{
+		if (const FName* SocketName = TargetingSocketMap.Find(BoneTag))
+		{
+			if (SkelComp->DoesSocketExist(*SocketName))
+			{
+				return SkelComp->GetSocketLocation(*SocketName);
+			}
+		}
+	}
+
+	return OwnerActor->GetActorLocation();
 }
 
 void USyCombatComponent::CleanupExpired()

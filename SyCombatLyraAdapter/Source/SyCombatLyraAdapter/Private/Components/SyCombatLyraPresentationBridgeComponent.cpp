@@ -4,7 +4,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
-#include "GameplayCueParameters.h"
+#include "GameplayEffectTypes.h"
 
 USyCombatLyraPresentationBridgeComponent::USyCombatLyraPresentationBridgeComponent()
 {

@@ -37,7 +37,7 @@ void USyCombatLyraDemoSetupComponent::BeginPlay()
 	UE_LOG(LogSyCombatLyraDemo, Log, TEXT("SyCombat Lyra demo setup complete for %s"), *GetNameSafe(GetOwner()));
 }
 
-void USyCombatLyraDemoSetupComponent::RegisterDefaultProcessors(USyCombatComponent* Combat) const
+void USyCombatLyraDemoSetupComponent::RegisterDefaultProcessors(USyCombatComponent* Combat)
 {
 	if (!Combat)
 	{

@@ -29,5 +29,9 @@ public:
 	/** 业务层可选的标签（用于筛选/判定） */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="SyCombat|Entity")
 	FGameplayTagContainer GetCombatTags() const;
+
+	/** 目标点（支持骨骼/部位 Tag） */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="SyCombat|Entity")
+	FVector GetTargetingPoint(FGameplayTag BoneTag) const;
 };
 

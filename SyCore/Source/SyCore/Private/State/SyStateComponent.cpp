@@ -310,12 +310,15 @@ void USyStateComponent::BuildBackendInstances()
 
 void USyStateComponent::SortBackends()
 {
-    Backends.Sort([](const TObjectPtr<USyStateBackendBase>& A, const TObjectPtr<USyStateBackendBase>& B)
-    {
-        const int32 PA = A ? A->GetBackendPriority() : 0;
-        const int32 PB = B ? B->GetBackendPriority() : 0;
-        return PA > PB;
-    });
+	Backends.RemoveAll([](const TObjectPtr<USyStateBackendBase>& Item)
+	{
+		return !Item;
+	});
+
+	Backends.Sort([](const USyStateBackendBase& A, const USyStateBackendBase& B)
+	{
+		return A.GetBackendPriority() > B.GetBackendPriority();
+	});
 }
 
 bool USyStateComponent::ApplyViaBackends(const FSyStateChangeRequest& LocalRequest)

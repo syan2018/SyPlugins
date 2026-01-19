@@ -8,7 +8,7 @@
 #include "State/Types/StateParameterTypes.h"
 
 #include "Engine/World.h"
-#include "GameFramework/GameInstance.h"
+#include "Engine/GameInstance.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSyGenericStateBackend, Log, All);
 

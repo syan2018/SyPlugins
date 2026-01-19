@@ -79,6 +79,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="SyCombat|Input")
 	float DefaultExpirationSeconds = 0.35f;
 
+	/** 目标点映射：BoneTag -> SocketName（仅作为默认实现） */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="SyCombat|Targeting")
+	TMap<FGameplayTag, FName> TargetingSocketMap;
+
 	UPROPERTY(BlueprintAssignable, Category="SyCombat|Events")
 	FOnSyCombatActionRequested OnActionRequested;
 

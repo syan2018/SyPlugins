@@ -33,7 +33,7 @@ public:
 	TMap<FGameplayTag, FGameplayTag> DefaultActionToEvent;
 
 private:
-	void RegisterDefaultProcessors(USyCombatComponent* Combat) const;
+	void RegisterDefaultProcessors(USyCombatComponent* Combat);
 	void ApplyDefaultActionMapping(USyCombatGASAbilityDriverComponent* Driver) const;
 };
 

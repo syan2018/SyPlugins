@@ -181,6 +181,7 @@ private:
 template<typename T>
 T* USyEntityComponent::FindSyComponent() const
 {
+	static_assert(TIsDerivedFrom<T, UActorComponent>::IsDerived, "FindSyComponent expects UActorComponent-derived type.");
     for (UActorComponent* Comp : ManagedSyComponents)
     {
         if (T* TypedComp = Cast<T>(Comp))
@@ -188,10 +189,22 @@ T* USyEntityComponent::FindSyComponent() const
             return TypedComp;
         }
     }
-    // 也可以直接检查已知的主要组件引用
-    if (T* TypedComp = Cast<T>(StateComponent)) return TypedComp;
-    if (T* TypedComp = Cast<T>(MessageComponent)) return TypedComp;
-    if (T* TypedComp = Cast<T>(IdentityComponent)) return TypedComp;
-    // ... 其他组件
-    return nullptr;
+	// 也可以直接检查已知的主要组件引用
+	if constexpr (TIsDerivedFrom<T, USyStateComponent>::IsDerived)
+	{
+		return StateComponent;
+	}
+	else if constexpr (TIsDerivedFrom<T, USyMessageComponent>::IsDerived)
+	{
+		return MessageComponent;
+	}
+	else if constexpr (TIsDerivedFrom<T, USyIdentityComponent>::IsDerived)
+	{
+		return IdentityComponent;
+	}
+	else
+	{
+		// ... 其他组件
+		return nullptr;
+	}
 }

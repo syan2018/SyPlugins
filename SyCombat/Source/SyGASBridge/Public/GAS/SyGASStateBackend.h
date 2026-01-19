@@ -2,14 +2,15 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
+#include "GameplayEffectTypes.h"
 #include "GameplayTagContainer.h"
 
+#include "GAS/SyStateToGASMapping.h"
 #include "State/Backends/SyStateBackendBase.h"
 
 #include "SyGASStateBackend.generated.h"
 
 class UAbilitySystemComponent;
-class USyStateToGASMapping;
 class UGameplayEffect;
 
 /**
