@@ -32,6 +32,7 @@ public:
 
     // --- 生命周期与初始化 ---
 protected:
+    virtual void OnRegister() override;
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void OnComponentCreated() override; // 用于编辑器中或动态创建时
@@ -142,18 +143,26 @@ public:
 private:
     // --- 内部属性 ---
     // 核心依赖组件 - 在构造函数中创建
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true", DisplayName = "SyIdentity"))
     TObjectPtr<USyIdentityComponent> IdentityComponent;
 
     // 可选组件 - 在初始化时创建
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true", DisplayName = "SyMessage"))
     TObjectPtr<USyMessageComponent> MessageComponent;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true", DisplayName = "SyState"))
     TObjectPtr<USyStateComponent> StateComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SyEntity|Components", meta = (AllowPrivateAccess = "true"))
     TArray<TObjectPtr<UActorComponent>> ManagedSyComponents; // 存储所有Sy*组件的引用，便于统一管理
+
+    /** 是否在运行时自动创建缺失的 SyStateComponent。 */
+    UPROPERTY(EditAnywhere, Category = "SyEntity|Initialization")
+    bool bAutoCreateStateComponent = true;
+
+    /** 防止编辑器/初始化阶段重复刷屏日志。 */
+    bool bLoggedMissingStateComponent = false;
+    bool bLoggedStateComponentCreationFailure = false;
 
     bool bIsInitialized = false;
     bool bRegistered = false; // 是否已注册到Registry

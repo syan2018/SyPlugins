@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Logging/LogMacros.h"
+#include "State/Backends/SyGenericStateBackend.h"
 #include "State/Types/StateContainerTypes.h" // Included via header, but good practice
 #include "State/Types/StateParameterTypes.h" // Included via header, but good practice
 
@@ -304,6 +305,15 @@ void USyStateComponent::BuildBackendInstances()
         if (NewBackend)
         {
             Backends.Add(NewBackend);
+        }
+    }
+
+    if (Backends.Num() == 0 && bAutoCreateStandardBackends)
+    {
+        if (USyStateBackendBase* GenericBackend = NewObject<USyStateBackendBase>(this, USyGenericStateBackend::StaticClass()))
+        {
+            Backends.Add(GenericBackend);
+            UE_LOG(LogSyStateComponent, Log, TEXT("%s: Auto-created default backend USyGenericStateBackend."), *GetNameSafe(GetOwner()));
         }
     }
 }

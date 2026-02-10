@@ -1,4 +1,5 @@
 #include "Entity/SyIdentityComponent.h"
+#include "Foundation/SyLogging.h"
 
 USyIdentityComponent::USyIdentityComponent()
 {
@@ -11,7 +12,7 @@ void USyIdentityComponent::BeginPlay()
     Super::BeginPlay();
 
     // 玄学初始化，访问信息确保加载
-    UE_LOG(LogTemp, Log, TEXT("[SyIdentityComponent] Identity Info - ID: %s, Tags: %s, Alias: %s"),
+    UE_LOG(LogSyEntity, Log, TEXT("Identity Info - ID: %s, Tags: %s, Alias: %s"),
             *GetEntityId().ToString(),
             *GetEntityTags().ToString(),
             *GetEntityAlias().ToString());

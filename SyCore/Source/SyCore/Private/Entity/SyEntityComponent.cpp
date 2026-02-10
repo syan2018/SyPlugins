@@ -5,6 +5,7 @@
 #include "State/SyStateComponent.h"
 #include "State/Operations/OperationTypes.h"
 #include "State/SyStateTypes.h"
+#include "Foundation/SyLogging.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -18,6 +19,17 @@ USyEntityComponent::USyEntityComponent()
     
     // 创建核心依赖组件 - IdentityComponent
     IdentityComponent = CreateDefaultSubobject<USyIdentityComponent>(TEXT("IdentityComponent"));
+}
+
+void USyEntityComponent::OnRegister()
+{
+    Super::OnRegister();
+
+    // 尽早补齐依赖组件，避免其他组件在 BeginPlay 首帧查找不到 StateComponent。
+    if (!bIsInitialized)
+    {
+        EnsureDependentComponents();
+    }
 }
 
 void USyEntityComponent::OnComponentCreated()
@@ -36,6 +48,9 @@ void USyEntityComponent::BeginPlay()
     // 这样可以避免组件 BeginPlay 调用顺序不确定导致的问题
     if (!bIsInitialized)
     {
+        // 先尽可能补齐依赖组件，让同帧后续逻辑可见。
+        EnsureDependentComponents();
+
         // 使用 Timer 延迟一帧
         if (UWorld* World = GetWorld())
         {
@@ -114,6 +129,29 @@ void USyEntityComponent::EnsureDependentComponents()
     {
         return;
     }
+    UWorld* OwnerWorld = Owner->GetWorld();
+    const bool bIsGameWorld = OwnerWorld && OwnerWorld->IsGameWorld();
+
+    auto CreateManagedComponent = [this, Owner](UClass* ComponentClass, const FName ComponentName) -> UActorComponent*
+    {
+        if (!ComponentClass || !Owner)
+        {
+            return nullptr;
+        }
+
+        UActorComponent* NewComp = NewObject<UActorComponent>(Owner, ComponentClass, ComponentName);
+        if (!NewComp)
+        {
+            return nullptr;
+        }
+
+        // 使用 AddInstanceComponent + RegisterComponent 的标准流程，
+        // 确保运行时组件被 Actor 正确拥有并可在实例详情中看到。
+        Owner->AddInstanceComponent(NewComp);
+        NewComp->RegisterComponent();
+        ManagedSyComponents.AddUnique(NewComp);
+        return NewComp;
+    };
 
     // 1. 查找 MessageComponent（优先使用已存在的）
     if (!MessageComponent)
@@ -122,14 +160,12 @@ void USyEntityComponent::EnsureDependentComponents()
     }
     
     // 如果没有找到，只在运行时动态创建
-    if (!MessageComponent && Owner->GetWorld() && Owner->GetWorld()->IsGameWorld())
+    if (!MessageComponent && bIsGameWorld)
     {
-        MessageComponent = NewObject<USyMessageComponent>(Owner, USyMessageComponent::StaticClass(), TEXT("SyMessageComponent"));
-        MessageComponent->RegisterComponent();
-        ManagedSyComponents.Add(MessageComponent);
+        MessageComponent = Cast<USyMessageComponent>(CreateManagedComponent(USyMessageComponent::StaticClass(), TEXT("SyMessageComponent")));
     }
 
-    // 2. 查找 StateComponent（必须在蓝图中已添加）
+    // 2. 查找 StateComponent
     if (!StateComponent)
     {
         // 使用 GetComponents 遍历查找，确保能找到所有实例
@@ -141,7 +177,7 @@ void USyEntityComponent::EnsureDependentComponents()
             // 如果有多个，发出警告
             if (StateComponents.Num() > 1)
             {
-                UE_LOG(LogTemp, Error, TEXT("❌ Actor %s has %d StateComponents! This will cause problems!"), 
+                UE_LOG(LogSyEntity, Error, TEXT("Actor %s has %d SyStateComponents. This can cause inconsistent state routing."),
                     *GetNameSafe(Owner), StateComponents.Num());
             }
             
@@ -150,16 +186,54 @@ void USyEntityComponent::EnsureDependentComponents()
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("❌ No StateComponent found on Actor %s! Please add SyStateComponent in Blueprint."), 
-                *GetNameSafe(Owner));
+            if (!bLoggedMissingStateComponent)
+            {
+                UE_LOG(LogSyEntity, Log, TEXT("No SyStateComponent found on Actor %s. Auto-create is %s."),
+                    *GetNameSafe(Owner), bAutoCreateStateComponent ? TEXT("enabled") : TEXT("disabled"));
+                bLoggedMissingStateComponent = true;
+            }
         }
     }
-    
-    // 不再动态创建 StateComponent！必须在蓝图中手动添加
+    else
+    {
+        bLoggedMissingStateComponent = false;
+    }
+
+    // 支持自动补齐：恢复 SyEntity 作为依赖组件统一入口的能力
     if (!StateComponent)
     {
-        UE_LOG(LogTemp, Error, TEXT("❌ CRITICAL: Actor %s has no StateComponent!"), 
-            *GetNameSafe(Owner));
+        if (bAutoCreateStateComponent && bIsGameWorld)
+        {
+            StateComponent = Cast<USyStateComponent>(CreateManagedComponent(USyStateComponent::StaticClass(), TEXT("SyStateComponent")));
+            if (StateComponent)
+            {
+                UE_LOG(LogSyEntity, Log, TEXT("Auto-created SyStateComponent on Actor %s."), *GetNameSafe(Owner));
+                bLoggedStateComponentCreationFailure = false;
+            }
+            else if (!bLoggedStateComponentCreationFailure)
+            {
+                UE_LOG(LogSyEntity, Error, TEXT("Failed to auto-create SyStateComponent on Actor %s."),
+                    *GetNameSafe(Owner));
+                bLoggedStateComponentCreationFailure = true;
+            }
+        }
+        else
+        {
+            if (bIsGameWorld)
+            {
+                if (!bLoggedStateComponentCreationFailure)
+                {
+                    UE_LOG(LogSyEntity, Error, TEXT("Actor %s has no SyStateComponent. Enable bAutoCreateStateComponent or add one in Blueprint."),
+                        *GetNameSafe(Owner));
+                    bLoggedStateComponentCreationFailure = true;
+                }
+            }
+            else
+            {
+                UE_LOG(LogSyEntity, Verbose, TEXT("Actor %s has no SyStateComponent in non-game world; skip auto-create."),
+                    *GetNameSafe(Owner));
+            }
+        }
     }
 
     // 3. 收集其他Sy系列组件
@@ -336,14 +410,14 @@ bool USyEntityComponent::ApplyStateOperation(const FSyOperation& Operation)
 
         if (!bAny)
         {
-        UE_LOG(LogTemp, Warning, TEXT("ApplyStateOperation: no state parameters found in FSyOperation."));
+        UE_LOG(LogSyEntity, Warning, TEXT("ApplyStateOperation: no state parameters found in FSyOperation."));
             return false;
         }
 
         return bAllApplied;
     }
 
-    UE_LOG(LogTemp, Error, TEXT("ApplyStateOperation: no USyStateComponent found. Attach USyStateComponent and backend objects."));
+    UE_LOG(LogSyEntity, Error, TEXT("ApplyStateOperation: no USyStateComponent found. Attach USyStateComponent and backend objects."));
     return false;
 }
 

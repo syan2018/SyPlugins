@@ -1,6 +1,7 @@
 #include "Entity/SyEntityRegistry.h"
 #include "Entity/SyEntityComponent.h"
 #include "Entity/SyIdentityComponent.h"
+#include "Foundation/SyLogging.h"
 
 namespace SyEntityRegistry::Private
 {
@@ -57,7 +58,7 @@ void USyEntityRegistry::RegisterEntity(USyEntityComponent* EntityComponent)
 		{
 			if (Existing->Get() != nullptr && Existing->Get() != EntityComponent)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("[SyEntityRegistry] Duplicate alias '%s'. Overwriting previous entity."), *Alias.ToString());
+				UE_LOG(LogSyEntity, Warning, TEXT("Duplicate alias '%s'. Overwriting previous entity."), *Alias.ToString());
 			}
 		}
 		EntityAliasMap.Add(Alias, EntityComponent);

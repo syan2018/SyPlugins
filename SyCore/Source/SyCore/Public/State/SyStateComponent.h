@@ -151,6 +151,12 @@ public:
     TArray<TSubclassOf<USyStateBackendBase>> BackendTypes;
 
     /**
+     * @brief 当未配置任何后端时，自动创建标准后端（USyGenericStateBackend）。
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="SyState|Backend")
+    bool bAutoCreateStandardBackends = true;
+
+    /**
      * @brief 状态后端实例（可手工配置）
      * @note 若此列表非空，将优先使用实例并跳过 BackendTypes/Profile 的自动创建
      */
