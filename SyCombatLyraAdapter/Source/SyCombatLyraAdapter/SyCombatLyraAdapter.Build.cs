@@ -31,6 +31,10 @@ public class SyCombatLyraAdapter : ModuleRules
 			new string[]
 			{
 				"Engine",
+				"EnhancedInput",
+
+				// Lyra (Observer: HealthComponent, InputBridge: InputComponent/PawnData)
+				"LyraGame",
 			});
 	}
 }

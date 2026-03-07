@@ -26,6 +26,9 @@ void USyCombatGASAbilityDriverComponent::OnSyComponentInitialized()
 
 	// 绑定 SyCombat 的 Action 入口
 	Combat->OnActionRequested.AddDynamic(this, &USyCombatGASAbilityDriverComponent::HandleActionRequested);
+
+	UE_LOG(LogSyCombatGASDriver, Log, TEXT("[%s] GASAbilityDriver initialized (Combat=%s, Mappings=%d)"),
+		*GetNameSafe(GetOwner()), *GetNameSafe(Combat), ActionToGameplayEventTag.Num());
 }
 
 UAbilitySystemComponent* USyCombatGASAbilityDriverComponent::ResolveASC() const
@@ -49,7 +52,7 @@ UAbilitySystemComponent* USyCombatGASAbilityDriverComponent::ResolveASC() const
 
 void USyCombatGASAbilityDriverComponent::HandleActionRequested(const FSyCombatActionRequest& Request)
 {
-	HandleActionRequest(Request);
+	Execute_HandleActionRequest(this, Request);
 }
 
 void USyCombatGASAbilityDriverComponent::HandleActionRequest_Implementation(const FSyCombatActionRequest& Request)
